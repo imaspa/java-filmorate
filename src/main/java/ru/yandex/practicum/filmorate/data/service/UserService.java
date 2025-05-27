@@ -23,38 +23,42 @@ public class UserService {
     private final UserMapper mapper;
 
     public UserDto add(@Valid UserDto userDto) throws IdNotEmptyException {
-        log.info("Создание пользователя. Логин: %s".formatted(userDto.getLogin()));
+        log.info("Создание пользователя (старт). Логин: {}", userDto.getLogin());
         if (userDto.getId() != null) {
             throw new IdNotEmptyException("При создании записи запрещена передача идентификатора");
         }
         prepareDto(userDto);
-        var filmSaved = repository.addOrUpdate(mapper.toEntity(userDto,repository.getNextId()));
+        var filmSaved = repository.addOrUpdate(mapper.toEntity(userDto, repository.getNextId()));
+        log.info("Создание пользователя (стоп). Логин: {}", userDto.getLogin());
         return mapper.toDto(filmSaved);
     }
 
     public UserDto update(Long userId, @Valid UserDto userDto) throws NotFoundException {
-        log.info("Обновление пользователя. Логин: %s".formatted(userDto.getLogin()));
+        log.info("Обновление пользователя (старт). Логин: {}", userDto.getLogin());
         if (!repository.checkExist(userId)) {
             throw new NotFoundException("Пользователь не найден");
         }
         prepareDto(userDto);
-        var filmSaved = repository.addOrUpdate(mapper.toEntity(userDto,userId));
+        var filmSaved = repository.addOrUpdate(mapper.toEntity(userDto, userId));
+        log.info("Обновление пользователя (стоп). Логин: {}", userDto.getLogin());
         return mapper.toDto(filmSaved);
     }
 
     public void prepareDto(UserDto userDto) {
         if (StringUtils.isBlank(userDto.getName())) {
-            log.debug("id:%s -> пустой name заменен на Login".formatted(String.valueOf(userDto.getId())));
+            log.debug("id:{} -> пустой name заменен на Login", userDto.getId());
             userDto.setName(userDto.getLogin());
         }
     }
 
     public List<UserDto> getAll() {
-        log.info("Получение списка всех пользователей");
-        return repository.findAll()
+        log.info("Получение списка всех пользователей (старт)");
+        var result = repository.findAll()
                 .stream()
                 .map(mapper::toDto)
                 .toList();
+        log.info("Получение списка всех пользователей (стоп)");
+        return result;
     }
 
 }

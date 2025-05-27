@@ -17,7 +17,7 @@ public class HandlerException {
 
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ErrorMessage> notFoundException(NotFoundException exception) {
-        log.error(exception.getMessage());
+        log.error(exception.getMessage(), exception);
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(new ErrorMessage(exception.getMessage()));
@@ -25,7 +25,7 @@ public class HandlerException {
 
     @ExceptionHandler(IdNotEmptyException.class)
     public ResponseEntity<ErrorMessage> idNotEmptyException(IdNotEmptyException exception) {
-        log.error(exception.getMessage());
+        log.error(exception.getMessage(), exception);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorMessage(exception.getMessage()));
@@ -40,9 +40,16 @@ public class HandlerException {
                 .map(error -> "%s: %s".formatted(error.getField(), error.getDefaultMessage()))
                 .collect(Collectors.joining(", "));
         log.error(errorMessage);
-
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorMessage(errorMessage));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorMessage> handleAllExceptions(Exception exception) {
+        log.error(exception.getMessage(), exception);
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorMessage("Произошла непредвиденная ошибка"));
     }
 }

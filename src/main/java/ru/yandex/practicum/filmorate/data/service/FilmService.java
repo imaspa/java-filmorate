@@ -23,29 +23,33 @@ public class FilmService {
 
 
     public FilmDto add(@Valid FilmDto filmDto) throws IdNotEmptyException {
-        log.info("Создание фильма. Наименование: %s".formatted(filmDto.getName()));
+        log.info("Создание фильма (старт). Наименование: {}", filmDto.getName());
         if (filmDto.getId() != null) {
             throw new IdNotEmptyException("При создании записи запрещена передача идентификатора");
         }
         var filmSaved = repository.addOrUpdate(mapper.toEntity(filmDto, repository.getNextId()));
+        log.info("Создание фильма (стоп). Наименование: {}", filmDto.getName());
         return mapper.toDto(filmSaved);
     }
 
     public FilmDto update(Long filmId, @Valid FilmDto filmDto) throws NotFoundException {
-        log.info("Обновление фильма. Наименование: %s".formatted(filmDto.getName()));
+        log.info("Обновление фильма (старт). Наименование: {}", filmDto.getName());
         if (!repository.checkExist(filmId)) {
             throw new NotFoundException("Фильм не найден");
         }
         var filmSaved = repository.addOrUpdate(mapper.toEntity(filmDto, filmId));
+        log.info("Обновление фильма (стоп). Наименование: {}", filmDto.getName());
         return mapper.toDto(filmSaved);
     }
 
     public List<FilmDto> getAll() {
-        log.info("Получение списка всех фильмов");
-        return repository.findAll()
+        log.info("Получение списка всех фильмов (старт)");
+        var result = repository.findAll()
                 .stream()
                 .map(mapper::toDto)
                 .toList();
+        log.info("Получение списка всех фильмов (стоп)");
+        return result;
     }
 
 
