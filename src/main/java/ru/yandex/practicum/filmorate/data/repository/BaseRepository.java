@@ -11,7 +11,7 @@ import java.util.Map;
 
 @Repository
 public class BaseRepository<T extends Identifiable> {
-    private final Map<Long, T> storage = new HashMap<>();
+    final Map<Long, T> storage = new HashMap<>();
 
     public T addOrUpdate(T entity) {
         storage.put(entity.getId(), entity);
