@@ -29,17 +29,16 @@ public class FilmService {
         if (filmDto.getId() != null) {
             throw new ConditionsException("При создании записи запрещена передача идентификатора");
         }
-        var filmSaved = repository.addOrUpdate(mapper.toEntity(filmDto, repository.getNextId()));
+        var filmSaved = repository.addOrUpdate(mapper.map(filmDto, repository.getNextId()));
         log.info("Создание фильма (стоп). Наименование: {}", filmDto.getName());
         return mapper.toDto(filmSaved);
     }
 
     public FilmDto update(Long filmId, @Valid FilmDto filmDto) throws NotFoundException {
         log.info("Обновление фильма (старт). Наименование: {}", filmDto.getName());
-        if (!repository.checkExist(filmId)) {
-            throw new NotFoundException("Фильм не найден");
-        }
-        var filmSaved = repository.addOrUpdate(mapper.toEntity(filmDto, filmId));
+        var film = repository.findById(filmId);
+        mapper.map(film, filmDto);
+        var filmSaved = repository.addOrUpdate(film);
         log.info("Обновление фильма (стоп). Наименование: {}", filmDto.getName());
         return mapper.toDto(filmSaved);
     }
@@ -63,9 +62,6 @@ public class FilmService {
         if (!repositoryUser.checkExist(userId)) {
             throw new NotFoundException("Пользователь не найден");
         }
-        if (!repository.checkExist(filmId)) {
-            throw new NotFoundException("Фильм не найден");
-        }
         var film = repository.findById(filmId);
         if (film.isLiked(userId)) {
             throw new ConditionsException("Лайк уже учтен");
@@ -78,9 +74,6 @@ public class FilmService {
         log.info("Удалить лайк (старт). Пользователь: {}, фильм: {}", userId, filmId);
         if (!repositoryUser.checkExist(userId)) {
             throw new NotFoundException("Пользователь не найден");
-        }
-        if (!repository.checkExist(filmId)) {
-            throw new NotFoundException("Фильм не найден");
         }
         var film = repository.findById(filmId);
         if (!film.isLiked(userId)) {

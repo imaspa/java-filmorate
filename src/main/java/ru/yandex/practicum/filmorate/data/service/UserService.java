@@ -36,11 +36,10 @@ public class UserService {
 
     public UserDto update(Long userId, @Valid UserDto userDto) throws NotFoundException {
         log.info("Обновление пользователя (старт). Логин: {}", userDto.getLogin());
-        if (!repository.checkExist(userId)) {
-            throw new NotFoundException("Пользователь не найден");
-        }
         prepareDto(userDto);
-        var userSaved = repository.addOrUpdate(mapper.toEntity(userDto, userId));
+        var user = repository.findById(userId);
+        mapper.map(user, userDto);
+        var userSaved = repository.addOrUpdate(user);
         log.info("Обновление пользователя (стоп). Логин: {}", userDto.getLogin());
         return mapper.toDto(userSaved);
     }
@@ -68,17 +67,12 @@ public class UserService {
 
     public void addFriend(Long id, Long friendId) throws NotFoundException, ConditionsException {
         log.info("Добавление в друзья (старт). кто: {} к кому: {} ", friendId, id);
-        if (!repository.checkExist(id)) {
-            throw new NotFoundException("Пользователь к кому добавляется в друзья не найден");
-        }
-        if (!repository.checkExist(friendId)) {
-            throw new NotFoundException("Пользователь который добавляется в друзья не найден");
-        }
+        var user = repository.findById(id);
+        var friend = repository.findById(friendId);
+
         if (Objects.equals(id, friendId)) {
             throw new ConditionsException("Нельзя самому к себе добавится в друзья");
         }
-        var user = repository.findById(id);
-        var friend = repository.findById(friendId);
         if (user.isFriend(friend)) {
             throw new ConditionsException("Пользователь уже в списке друзей");
         }
@@ -89,12 +83,6 @@ public class UserService {
 
     public void removeFriend(Long id, Long friendId) throws NotFoundException {
         log.info("Удаление из друзей (старт). кто: {} от кого: {} ", friendId, id);
-        if (!repository.checkExist(id)) {
-            throw new NotFoundException("Пользователь к кому добавляется в друзья не найден");
-        }
-        if (!repository.checkExist(friendId)) {
-            throw new NotFoundException("Пользователь который добавляется в друзья не найден");
-        }
         var user = repository.findById(id);
         var friend = repository.findById(friendId);
 
@@ -109,9 +97,6 @@ public class UserService {
 
     public List<UserDto> userFriends(Long id) throws NotFoundException {
         log.info("Список друзей (старт): {} ", id);
-        if (!repository.checkExist(id)) {
-            throw new NotFoundException("Пользователь к кому добавляется в друзья не найден");
-        }
         var user = repository.findById(id);
         log.info("Список друзей (стоп): {} ", id);
         return user.getFriends()
@@ -122,17 +107,11 @@ public class UserService {
 
     public List<UserDto> commonFriends(Long id, Long otherId) throws NotFoundException, ConditionsException {
         log.info("Общие друзья пользователей (старт). пользователь 1: {} пользователь 2: {} ", id, otherId);
-        if (!repository.checkExist(id)) {
-            throw new NotFoundException("Пользователь к кому добавляется в друзья не найден");
-        }
-        if (!repository.checkExist(otherId)) {
-            throw new NotFoundException("Пользователь который добавляется в друзья не найден");
-        }
+        var user = repository.findById(id);
+        var userOther = repository.findById(otherId);
         if (Objects.equals(id, otherId)) {
             throw new ConditionsException("Нельзя самому к себе добавится в друзья");
         }
-        var user = repository.findById(id);
-        var userOther = repository.findById(otherId);
 
         log.info("Общие друзья пользователей (стоп). пользователь 1: {} пользователь 2: {} ", id, otherId);
         return user.getCommonFriends(userOther)
