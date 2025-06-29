@@ -16,7 +16,9 @@ import java.lang.annotation.Target;
 @Documented
 public @interface DateMin {
     String message() default "Дата должна быть не раньше {value}";
+
     Class<?>[] groups() default {};
+
     Class<? extends Payload>[] payload() default {};
 
     /**

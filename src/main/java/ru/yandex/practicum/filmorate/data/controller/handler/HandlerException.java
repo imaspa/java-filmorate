@@ -6,7 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import ru.yandex.practicum.filmorate.data.exception.IdNotEmptyException;
+import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
 
 import java.util.stream.Collectors;
@@ -23,8 +23,8 @@ public class HandlerException {
                 .body(new ErrorMessage(exception.getMessage()));
     }
 
-    @ExceptionHandler(IdNotEmptyException.class)
-    public ResponseEntity<ErrorMessage> idNotEmptyException(IdNotEmptyException exception) {
+    @ExceptionHandler(ConditionsException.class)
+    public ResponseEntity<ErrorMessage> conditionsException(ConditionsException exception) {
         log.error(exception.getMessage(), exception);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)

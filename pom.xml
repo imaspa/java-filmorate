@@ -56,6 +56,11 @@
 			<artifactId>commons-lang3</artifactId>
 			<version>${apache.string.utils.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>org.zalando</groupId>
+			<artifactId>logbook-spring-boot-starter</artifactId>
+			<version>3.7.2</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -69,6 +74,9 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.8.1</version>
 				<configuration>
+					<compilerArgs>
+						<arg>-parameters</arg>
+					</compilerArgs>
 					<annotationProcessorPaths>
 						<path>
 							<groupId>org.mapstruct</groupId>
