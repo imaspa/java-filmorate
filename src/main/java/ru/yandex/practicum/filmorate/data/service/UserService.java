@@ -3,17 +3,18 @@ package ru.yandex.practicum.filmorate.data.service;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 import ru.yandex.practicum.filmorate.data.dto.UserDto;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.data.mapper.UserMapper;
+import ru.yandex.practicum.filmorate.data.model.User;
 import ru.yandex.practicum.filmorate.data.repository.UserRepository;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -23,32 +24,21 @@ public class UserService {
     private final UserRepository repository;
     private final UserMapper mapper;
 
-    public UserDto add(@Valid UserDto userDto) throws ConditionsException {
+    public UserDto insert(@Valid UserDto userDto) throws ConditionsException {
         log.info("Создание пользователя (старт). Логин: {}", userDto.getLogin());
-        if (userDto.getId() != null) {
-            throw new ConditionsException("При создании записи запрещена передача идентификатора");
-        }
-        prepareDto(userDto);
-        var userSaved = repository.addOrUpdate(mapper.toEntity(userDto, repository.getNextId()));
+        User user = mapper.toEntity(userDto);
+        user = repository.insert(user);
         log.info("Создание пользователя (стоп). Логин: {}", userDto.getLogin());
-        return mapper.toDto(userSaved);
+        return mapper.toDto(user);
     }
 
-    public UserDto update(Long userId, @Valid UserDto userDto) throws NotFoundException {
+    public UserDto update(Long userId, @Valid UserDto userDto) throws ConditionsException, NotFoundException {
         log.info("Обновление пользователя (старт). Логин: {}", userDto.getLogin());
-        prepareDto(userDto);
-        var user = repository.findById(userId);
+        var user = repository.findByIdOrThrow(userId);
         mapper.map(user, userDto);
-        var userSaved = repository.addOrUpdate(user);
+        user = repository.update(user);
         log.info("Обновление пользователя (стоп). Логин: {}", userDto.getLogin());
-        return mapper.toDto(userSaved);
-    }
-
-    public void prepareDto(UserDto userDto) {
-        if (StringUtils.isBlank(userDto.getName())) {
-            log.debug("id:{} -> пустой name заменен на Login", userDto.getId());
-            userDto.setName(userDto.getLogin());
-        }
+        return mapper.toDto(user);
     }
 
     public List<UserDto> getAll() {
@@ -62,61 +52,63 @@ public class UserService {
     }
 
     public UserDto getUser(Long userId) throws NotFoundException {
-        return mapper.toDto(repository.findById(userId));
+        return mapper.toDto(repository.findByIdOrThrow(userId));
     }
 
-    public void addFriend(Long id, Long friendId) throws NotFoundException, ConditionsException {
-        log.info("Добавление в друзья (старт). кто: {} к кому: {} ", friendId, id);
-        var user = repository.findById(id);
-        var friend = repository.findById(friendId);
 
-        if (Objects.equals(id, friendId)) {
-            throw new ConditionsException("Нельзя самому к себе добавится в друзья");
+    public void addFriend(Long userId, Long friendId) throws NotFoundException, ConditionsException {
+        log.info("Добавление в друзья (старт). кто: {} к кому: {}", friendId, userId);
+        repository.findByIdOrThrow(userId);
+        repository.findByIdOrThrow(friendId);
+
+        if (Objects.equals(userId, friendId)) {
+            throw new ConditionsException("Нельзя добавить самого себя в друзья");
         }
-        if (user.isFriend(friend)) {
-            throw new ConditionsException("Пользователь уже в списке друзей");
-        }
-        user.addFriend(friend);
-        friend.addFriend(user);
-        log.info("Добавление в друзья (стоп). кто: {} к кому: {} ", friendId, id);
+
+        // Добавляем дружбу (статус false - запрос на дружбу)
+        repository.addFriend(userId, friendId, false);
+        log.info("Добавление в друзья (стоп). кто: {} к кому: {}", friendId, userId);
     }
 
-    public void removeFriend(Long id, Long friendId) throws NotFoundException {
-        log.info("Удаление из друзей (старт). кто: {} от кого: {} ", friendId, id);
-        var user = repository.findById(id);
-        var friend = repository.findById(friendId);
+    public void removeFriend(Long userId, Long friendId) throws NotFoundException {
+        log.info("Удаление из друзей (старт). кто: {} от кого: {}", friendId, userId);
 
-//        if (!user.isFriend(friend)) {
-//            throw new ConditionsException("Пользователь не найден в списке друзей");
-//        }
+        // Проверка существования пользователей
+        repository.findByIdOrThrow(userId);
+        repository.findByIdOrThrow(friendId);
 
-        user.removeFriend(friend);
-        friend.removeFriend(user);
-        log.info("Удаление из друзей (старт). кто: {} от кого: {} ", friendId, id);
+        repository.removeFriend(userId, friendId);
+        log.info("Удаление из друзей (стоп). кто: {} от кого: {}", friendId, userId);
     }
 
-    public List<UserDto> userFriends(Long id) throws NotFoundException {
-        log.info("Список друзей (старт): {} ", id);
-        var user = repository.findById(id);
-        log.info("Список друзей (стоп): {} ", id);
-        return user.getFriends()
+    public List<UserDto> getUserFriends(Long userId) throws NotFoundException {
+        log.info("Список друзей (старт): {}", userId);
+        repository.findByIdOrThrow(userId);
+        List<UserDto> friends = repository.getFriends(userId)
                 .stream()
                 .map(mapper::toDto)
-                .toList();
+                .collect(Collectors.toList());
+
+        log.info("Список друзей (стоп): {}", userId);
+        return friends;
     }
 
-    public List<UserDto> commonFriends(Long id, Long otherId) throws NotFoundException, ConditionsException {
-        log.info("Общие друзья пользователей (старт). пользователь 1: {} пользователь 2: {} ", id, otherId);
-        var user = repository.findById(id);
-        var userOther = repository.findById(otherId);
-        if (Objects.equals(id, otherId)) {
-            throw new ConditionsException("Нельзя самому к себе добавится в друзья");
+    public List<UserDto> getCommonFriends(Long userId, Long otherId) throws NotFoundException, ConditionsException {
+        log.info("Общие друзья пользователей (старт). пользователь 1: {} пользователь 2: {}", userId, otherId);
+
+        repository.findByIdOrThrow(userId);
+        repository.findByIdOrThrow(otherId);
+
+        if (Objects.equals(userId, otherId)) {
+            throw new ConditionsException("Нельзя искать общих друзей у одного пользователя");
         }
 
-        log.info("Общие друзья пользователей (стоп). пользователь 1: {} пользователь 2: {} ", id, otherId);
-        return user.getCommonFriends(userOther)
+        List<UserDto> commonFriends = repository.getCommonFriends(userId, otherId)
                 .stream()
                 .map(mapper::toDto)
-                .toList();
+                .collect(Collectors.toList());
+
+        log.info("Общие друзья пользователей (стоп). пользователь 1: {} пользователь 2: {}", userId, otherId);
+        return commonFriends;
     }
 }

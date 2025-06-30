@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import ru.yandex.practicum.filmorate.data.validation.DateMin;
 
 import java.time.LocalDate;
+import java.util.Set;
 
 @Builder(toBuilder = true)
 @Data
@@ -31,4 +32,10 @@ public class FilmDto {
 
     @Positive(message = "Продолжительность фильма должна быть положительным числом")
     private Integer duration;
+
+    private Set<Long> likes;
+
+    private MpaRatingDto mpa;
+
+    private Set<GenreDto> genres;
 }
