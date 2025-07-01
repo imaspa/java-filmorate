@@ -10,7 +10,7 @@ import ru.yandex.practicum.filmorate.data.model.Film;
 @Mapper(config = CommonMapperConfiguration.class)
 public interface FilmMapper {
     @Mapping(target = "id", ignore = true)
-    void map(@MappingTarget Film entity, FilmDto dto);
+    Film map(@MappingTarget Film entity, FilmDto dto);
 
     @Mapping(target = "id", ignore = true)
     Film toEntity(FilmDto dto);

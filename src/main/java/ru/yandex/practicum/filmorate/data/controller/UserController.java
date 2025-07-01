@@ -24,7 +24,7 @@ public class UserController {
 
     @PostMapping
     public UserDto addUser(@RequestBody UserDto userDto) throws ConditionsException {
-        return userService.insert(userDto);
+        return userService.add(userDto);
     }
 
     @PutMapping("/{userId}")

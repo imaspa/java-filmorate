@@ -24,7 +24,7 @@ public class UserService {
     private final UserRepository repository;
     private final UserMapper mapper;
 
-    public UserDto insert(@Valid UserDto userDto) throws ConditionsException {
+    public UserDto add(@Valid UserDto userDto) throws ConditionsException {
         log.info("Создание пользователя (старт). Логин: {}", userDto.getLogin());
         User user = mapper.toEntity(userDto);
         user = repository.insert(user);
@@ -34,8 +34,7 @@ public class UserService {
 
     public UserDto update(Long userId, @Valid UserDto userDto) throws ConditionsException, NotFoundException {
         log.info("Обновление пользователя (старт). Логин: {}", userDto.getLogin());
-        var user = repository.findByIdOrThrow(userId);
-        mapper.map(user, userDto);
+        var user = mapper.map(repository.findByIdOrThrow(userId), userDto);
         user = repository.update(user);
         log.info("Обновление пользователя (стоп). Логин: {}", userDto.getLogin());
         return mapper.toDto(user);

@@ -32,7 +32,7 @@ public class FilmService {
     private final GenreRepository repositoryGenre;
 
 
-    public FilmDto insert(@Valid FilmDto filmDto) throws ConditionsException, NotFoundException {
+    public FilmDto add(@Valid FilmDto filmDto) throws ConditionsException, NotFoundException {
         log.info("Создание фильма (старт). Наименование: {}", filmDto.getName());
         Film film = mapper.toEntity(filmDto);
         validateFilmRelations(film);
@@ -43,8 +43,7 @@ public class FilmService {
 
     public FilmDto update(Long filmId, @Valid FilmDto filmDto) throws NotFoundException, ConditionsException {
         log.info("Обновление фильма (старт). Наименование: {}", filmDto.getName());
-        var film = repository.findByIdOrThrow(filmId);
-        mapper.map(film, filmDto);
+        var film = mapper.map(repository.findByIdOrThrow(filmId), filmDto);
         validateFilmRelations(film);
         film = repository.update(film);
         log.info("Обновление фильма (стоп). Наименование: {}", filmDto.getName());

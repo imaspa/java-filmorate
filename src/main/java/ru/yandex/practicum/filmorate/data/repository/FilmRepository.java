@@ -11,6 +11,7 @@ import ru.yandex.practicum.filmorate.data.model.MpaRating;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -21,7 +22,19 @@ public class FilmRepository extends BaseRepository<Film> {
     private static final String INSERT_SQL = "INSERT INTO FILM (NAME, DESCRIPTION, RELEASE_DATE, DURATION, MPA_ID) VALUES (?, ?, ?, ?, ?)";
     private static final String UPDATE_SQL = "UPDATE FILM SET NAME = ?, DESCRIPTION = ?, RELEASE_DATE = ?, DURATION = ?, MPA_ID = ? WHERE ID = ?";
     private static final String FIND_BY_ID_SQL = "SELECT f.*, m.NAME AS MPA_NAME FROM FILM f JOIN MPA_RATING m ON f.MPA_ID = m.ID WHERE f.ID = ?";
-    private static final String FIND_ALL_SQL = "SELECT f.*, m.NAME AS MPA_NAME FROM FILM f JOIN MPA_RATING m ON f.MPA_ID = m.ID";
+    private static final String FIND_ALL_SQL = """
+            SELECT
+                f.ID AS FILM_ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION,
+                   f.MPA_ID, m.NAME AS MPA_NAME,
+                   g.ID AS GENRE_ID, g.NAME AS GENRE_NAME,
+                   fl.USER_ID
+            FROM FILM f
+            JOIN MPA_RATING m ON f.MPA_ID = m.ID
+            LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
+            LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
+            LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
+            ORDER BY f.ID
+            """;
     private static final String DELETE_SQL = "DELETE FROM FILM WHERE ID = ?";
 
     // Жанры
@@ -34,12 +47,21 @@ public class FilmRepository extends BaseRepository<Film> {
     private static final String ADD_LIKE_SQL = "INSERT INTO FILM_LIKE (FILM_ID, USER_ID) VALUES (?, ?)";
     private static final String REMOVE_LIKE_SQL = "DELETE FROM FILM_LIKE WHERE FILM_ID = ? AND USER_ID = ?";
     private static final String GET_LIKES_SQL = "SELECT USER_ID FROM FILM_LIKE WHERE FILM_ID = ?";
-    private static final String GET_POPULAR_FILMS_SQL = "SELECT f.*, m.NAME AS MPA_NAME FROM FILM f " +
-            "JOIN MPA_RATING m ON f.MPA_ID = m.ID " +
-            "LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID " +
-            "GROUP BY f.ID " +
-            "ORDER BY COUNT(fl.USER_ID) DESC " +
-            "LIMIT ?";
+    private static final String GET_POPULAR_FILMS_SQL = """
+            SELECT
+                f.ID AS FILM_ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION,
+                f.MPA_ID, m.NAME AS MPA_NAME,
+                g.ID AS GENRE_ID, g.NAME AS GENRE_NAME,
+                fl.USER_ID,
+                COUNT(fl.USER_ID) OVER (PARTITION BY f.ID) AS LIKE_COUNT
+            FROM FILM f
+            JOIN MPA_RATING m ON f.MPA_ID = m.ID
+            LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
+            LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
+            LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
+            ORDER BY LIKE_COUNT DESC
+            LIMIT ?
+            """;
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -56,11 +78,7 @@ public class FilmRepository extends BaseRepository<Film> {
             ps.setInt(4, f.getDuration());
             ps.setLong(5, f.getMpa().getId());
         }, film);
-
-        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
-            updateFilmGenres(insertedFilm.getId(), film.getGenres());
-        }
-
+        updateFilmGenres(insertedFilm.getId(), film.getGenres());
         return insertedFilm;
     }
 
@@ -73,12 +91,8 @@ public class FilmRepository extends BaseRepository<Film> {
             ps.setLong(5, f.getMpa().getId());
             ps.setLong(6, f.getId());
         }, film);
-
         jdbcTemplate.update(DELETE_GENRES_SQL, film.getId());
-        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
-            updateFilmGenres(film.getId(), film.getGenres());
-        }
-
+        updateFilmGenres(film.getId(), film.getGenres());
         return updatedFilm;
     }
 
@@ -89,15 +103,6 @@ public class FilmRepository extends BaseRepository<Film> {
             f.setLikes(getFilmLikes(f.getId()));
         });
         return film;
-    }
-
-    public List<Film> findAll() {
-        List<Film> films = findAll(FIND_ALL_SQL, this::mapToFilm);
-        films.forEach(f -> {
-            f.setGenres(getFilmGenres(f.getId()));
-            f.setLikes(getFilmLikes(f.getId()));
-        });
-        return films;
     }
 
     public int deleteById(Long id) {
@@ -112,7 +117,12 @@ public class FilmRepository extends BaseRepository<Film> {
     }
 
     private void updateFilmGenres(Long filmId, Set<Genre> genres) {
-        genres.forEach(genre -> jdbcTemplate.update(INSERT_GENRE_SQL, filmId, genre.getId()));
+        if (genres == null || genres.isEmpty()) {
+            return;
+        }
+        jdbcTemplate.batchUpdate(INSERT_GENRE_SQL, genres.stream()
+                .map(genre -> new Object[]{filmId, genre.getId()})
+                .collect(Collectors.toList()));
     }
 
     private Set<Genre> getFilmGenres(Long filmId) {
@@ -122,19 +132,21 @@ public class FilmRepository extends BaseRepository<Film> {
     }
 
     public void addLike(Long filmId, Long userId) throws ConditionsException {
-        Boolean alreadyLiked = jdbcTemplate.queryForObject(CHECK_LIKE_EXISTS_SQL, Boolean.class, filmId, userId);
-        if (Boolean.TRUE.equals(alreadyLiked)) {
+        if (isLikeExists(filmId, userId)) {
             throw new ConditionsException("Лайк уже учтен");
         }
         jdbcTemplate.update(ADD_LIKE_SQL, filmId, userId);
     }
 
     public void removeLike(Long filmId, Long userId) throws ConditionsException {
-        Boolean likeExists = jdbcTemplate.queryForObject(CHECK_LIKE_EXISTS_SQL, Boolean.class, filmId, userId);
-        if (Boolean.FALSE.equals(likeExists)) {
+        if (!isLikeExists(filmId, userId)) {
             throw new ConditionsException("Пользователь не может удалить лайк, который не добавлял");
         }
         jdbcTemplate.update(REMOVE_LIKE_SQL, filmId, userId);
+    }
+
+    public Boolean isLikeExists(Long filmId, Long userId) {
+        return jdbcTemplate.queryForObject(CHECK_LIKE_EXISTS_SQL, Boolean.class, filmId, userId);
     }
 
     public Set<Long> getFilmLikes(Long filmId) {
@@ -143,13 +155,42 @@ public class FilmRepository extends BaseRepository<Film> {
                 .collect(Collectors.toSet());
     }
 
-    public List<Film> getPopularFilms(Long count) {
-        List<Film> films = jdbcTemplate.query(GET_POPULAR_FILMS_SQL, (rs, rowNum) -> mapToFilm(rs), count);
-        films.forEach(f -> {
-            f.setGenres(getFilmGenres(f.getId()));
-            f.setLikes(getFilmLikes(f.getId()));
-        });
-        return films;
+    public List<Film> getPopularFilms(Long limit) {
+        return executeFilmQuery(GET_POPULAR_FILMS_SQL, limit);
+    }
+
+    public List<Film> findAll() {
+        return executeFilmQuery(FIND_ALL_SQL);
+    }
+
+    private List<Film> executeFilmQuery(String sql, Object... args) {
+        return jdbcTemplate.query(sql, this::mapFilmResultSet, args);
+    }
+
+    private Film mapFilmResultSet(ResultSet rs, int rowNum) throws SQLException {
+        Long filmId = rs.getLong("FILM_ID");
+
+        Film film = Film.builder()
+                .id(filmId)
+                .name(rs.getString("NAME"))
+                .description(rs.getString("DESCRIPTION"))
+                .releaseDate(rs.getDate("RELEASE_DATE").toLocalDate())
+                .duration(rs.getInt("DURATION"))
+                .mpa(new MpaRating(rs.getLong("MPA_ID"), rs.getString("MPA_NAME")))
+                .genres(new HashSet<>())
+                .likes(new HashSet<>())
+                .build();
+        Long genreId = rs.getLong("GENRE_ID");
+        if (!rs.wasNull()) {
+            film.getGenres().add(new Genre(
+                    genreId,
+                    rs.getString("GENRE_NAME")));
+        }
+        Long userId = rs.getLong("USER_ID");
+        if (!rs.wasNull()) {
+            film.getLikes().add(userId);
+        }
+        return film;
     }
 
     private Film mapToFilm(ResultSet rs) throws SQLException {

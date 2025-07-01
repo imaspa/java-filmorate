@@ -25,7 +25,7 @@ public class FilmController {
 
     @PostMapping
     public FilmDto addFilm(@RequestBody FilmDto filmDto) throws ConditionsException, NotFoundException {
-        return filmService.insert(filmDto);
+        return filmService.add(filmDto);
     }
 
     @PutMapping("/{filmId}")
