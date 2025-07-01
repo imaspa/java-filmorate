@@ -24,17 +24,17 @@ public class FilmController {
     private final FilmService filmService;
 
     @PostMapping
-    public FilmDto addFilm(@RequestBody FilmDto filmDto) throws ConditionsException {
+    public FilmDto addFilm(@RequestBody FilmDto filmDto) throws ConditionsException, NotFoundException {
         return filmService.add(filmDto);
     }
 
     @PutMapping("/{filmId}")
-    public FilmDto updateFilm(@PathVariable Long filmId, @RequestBody FilmDto filmDto) throws NotFoundException {
+    public FilmDto updateFilm(@PathVariable Long filmId, @RequestBody FilmDto filmDto) throws ConditionsException, NotFoundException {
         return filmService.update(filmId, filmDto);
     }
 
     @PutMapping
-    public FilmDto updateFilm(@RequestBody FilmDto filmDto) throws NotFoundException {
+    public FilmDto updateFilm(@RequestBody FilmDto filmDto) throws NotFoundException, ConditionsException {
         return filmService.update(filmDto.getId(), filmDto);
     }
 

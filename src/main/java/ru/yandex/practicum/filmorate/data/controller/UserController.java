@@ -28,12 +28,12 @@ public class UserController {
     }
 
     @PutMapping("/{userId}")
-    public UserDto updateUser(@PathVariable Long userId, @RequestBody UserDto userDto) throws NotFoundException {
+    public UserDto updateUser(@PathVariable Long userId, @RequestBody UserDto userDto) throws NotFoundException, ConditionsException {
         return userService.update(userId, userDto);
     }
 
     @PutMapping
-    public UserDto updateUser(@RequestBody UserDto userDto) throws NotFoundException {
+    public UserDto updateUser(@RequestBody UserDto userDto) throws NotFoundException, ConditionsException {
         return userService.update(userDto.getId(), userDto);
     }
 
@@ -59,11 +59,13 @@ public class UserController {
 
     @GetMapping("/{id}/friends")
     public List<UserDto> getFriendsList(@PathVariable Long id) throws NotFoundException {
-        return userService.userFriends(id);
+        return userService.getUserFriends(id);
     }
 
     @GetMapping("/{id}/friends/common/{otherId}")
     public List<UserDto> getCommonFriends(@PathVariable Long id, @PathVariable Long otherId) throws ConditionsException, NotFoundException {
-        return userService.commonFriends(id, otherId);
+        return userService.getCommonFriends(id, otherId);
     }
+
+
 }
