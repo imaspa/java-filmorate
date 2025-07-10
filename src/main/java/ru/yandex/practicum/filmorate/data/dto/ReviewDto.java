@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReviewDto {
-    private Long id;
+    private Long reviewId;
     private Long userId;
     private Long filmId;
     @NotBlank(message = "Отзыв не может быть пустым")
