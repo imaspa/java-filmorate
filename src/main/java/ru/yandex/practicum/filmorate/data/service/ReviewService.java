@@ -14,6 +14,7 @@ import ru.yandex.practicum.filmorate.data.repository.ReviewRepository;
 import ru.yandex.practicum.filmorate.data.repository.UserRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -72,11 +73,34 @@ public class ReviewService {
         }
         repositoryUser.findByIdOrThrow(userId);
         repositoryFilm.findByIdOrThrow(filmId);
-        if(review.getIsPositive()==null){
+        if (review.getIsPositive() == null) {
             throw new ConditionsException("Тип отзыва должен быть либо позитивный, либо негативный");
         }
         if (review.getUseful() == null) {
             review.setUseful(0);
         }
+    }
+
+    public ReviewDto addLike(Long id, Long userid, boolean isDislike) throws NotFoundException {
+        log.info("Добавление реакции на отзыв (старт) id = {}, юзер = {}, dislike = {}", id, userid, isDislike);
+        repositoryUser.findByIdOrThrow(userid);
+        repository.findByIdOrThrow(id);
+        repository.addLike(id, userid, isDislike);
+        Review review = repository.findByIdOrThrow(id);
+        log.info("Добавлена реакция isDislike = {}, useful теперь {}", isDislike, review.getUseful());
+        return mapper.toDto(review); //обновление useful
+    }
+
+    public void deleteLike(Long id, Long userid) throws NotFoundException {
+        log.info("Удаление реакции на отзыв (старт) id = {}, юзер = {}", id, userid);
+        repositoryUser.findByIdOrThrow(userid);
+        repository.findByIdOrThrow(id);
+        Optional<Boolean> optIsDislike = repository.getIsDislike(id, userid);
+        if (optIsDislike.isEmpty()) {
+            log.info("Не найдена реакция на отзыв {} юзера {}", id, userid);
+            return;
+        }
+        repository.deleteLike(id, userid, optIsDislike.get());
+        log.info("Удаление реакции на отзыв (стоп) id = {}, юзер = {}", id, userid);
     }
 }

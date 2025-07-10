@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.yandex.practicum.filmorate.data.dto.ReviewDto;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.data.model.Review;
 import ru.yandex.practicum.filmorate.data.service.ReviewService;
 
 import java.util.Collection;
@@ -50,4 +49,25 @@ public class ReviewController {
             @RequestParam(required = false, defaultValue = "10") Long count) {
         return service.getAll(filmId, count);
     }
+
+    @PutMapping("/{id}/like/{userid}")
+    public ReviewDto addLike(@PathVariable Long id, @PathVariable Long userid) throws NotFoundException {
+        return service.addLike(id, userid, false);
+    }
+
+    @PutMapping("/{id}/dislike/{userid}")
+    public ReviewDto addDislike(@PathVariable Long id, @PathVariable Long userid) throws NotFoundException {
+        return service.addLike(id, userid, true);
+    }
+
+    @DeleteMapping("/{id}/like/{userid}")
+    public void deleteLike(@PathVariable Long id, @PathVariable Long userid) throws NotFoundException {
+        service.deleteLike(id, userid);
+    }
+
+    @DeleteMapping("/{id}/dislike/{userid}")
+    public void deleteDislike(@PathVariable Long id, @PathVariable Long userid) throws NotFoundException {
+        service.deleteLike(id, userid);
+    }
+
 }
