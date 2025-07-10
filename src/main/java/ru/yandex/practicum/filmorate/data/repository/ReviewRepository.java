@@ -27,9 +27,9 @@ public class ReviewRepository extends BaseRepository<Review> {
     private static final String DELETE_LIKE = "DELETE FROM REVIEW_LIKE WHERE REVIEW_ID = ? AND USER_ID = ?";
     private static final String SELECT_LIKE = "SELECT is_dislike FROM REVIEW_LIKE WHERE REVIEW_ID = ? AND USER_ID = ? LIMIT 1";
 
-    public ReviewRepository(JdbcTemplate jdbcTemplate, JdbcTemplate jdbcTemplate1) {
+    public ReviewRepository(JdbcTemplate jdbcTemplate) {
         super(jdbcTemplate);
-        this.jdbcTemplate = jdbcTemplate1;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     public Review insert(Review review) throws ConditionsException {
