@@ -9,8 +9,10 @@ import ru.yandex.practicum.filmorate.data.dto.FilmDto;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.data.mapper.FilmMapper;
+import ru.yandex.practicum.filmorate.data.model.Director;
 import ru.yandex.practicum.filmorate.data.model.Film;
 import ru.yandex.practicum.filmorate.data.model.Genre;
+import ru.yandex.practicum.filmorate.data.repository.DirectorRepository;
 import ru.yandex.practicum.filmorate.data.repository.FilmRepository;
 import ru.yandex.practicum.filmorate.data.repository.GenreRepository;
 import ru.yandex.practicum.filmorate.data.repository.MpaRatingRepository;
@@ -30,6 +32,7 @@ public class FilmService {
     private final FilmMapper mapper;
     private final MpaRatingRepository repositoryMpaRating;
     private final GenreRepository repositoryGenre;
+    private final DirectorRepository repositoryDirector;
 
 
     public FilmDto add(@Valid FilmDto filmDto) throws ConditionsException, NotFoundException {
@@ -108,5 +111,18 @@ public class FilmService {
                 throw new NotFoundException("Один или несколько жанров не найдены");
             }
         }
+        // Проверка режиссеров
+        if (!repositoryDirector.isExistsAllDirectors(film.getDirectors())) {
+            throw new NotFoundException("Один или несколько режассёров не найдены");
+        }
+    }
+
+    public List<FilmDto> findByDirector(Long directorId, String sortBy) throws NotFoundException {
+        log.info("Запрос списка фильмов режиссёра id = {} sortBy = {}", directorId, sortBy);
+        Director director = repositoryDirector.getDirectorById(directorId);
+        return repository.getFilmByDirector(directorId, sortBy)
+                .stream()
+                .map(mapper::toDto)
+                .toList();
     }
 }

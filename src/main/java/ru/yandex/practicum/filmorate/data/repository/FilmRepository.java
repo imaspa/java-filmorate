@@ -4,6 +4,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.data.model.Director;
 import ru.yandex.practicum.filmorate.data.model.Film;
 import ru.yandex.practicum.filmorate.data.model.Genre;
 import ru.yandex.practicum.filmorate.data.model.MpaRating;
@@ -27,12 +28,15 @@ public class FilmRepository extends BaseRepository<Film> {
                 f.ID AS FILM_ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION,
                    f.MPA_ID, m.NAME AS MPA_NAME,
                    g.ID AS GENRE_ID, g.NAME AS GENRE_NAME,
-                   fl.USER_ID
+                   fl.USER_ID,
+                   d.ID AS DIRECTOR_ID, d.NAME AS DIRECTOR_NAME
             FROM FILM f
             JOIN MPA_RATING m ON f.MPA_ID = m.ID
             LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
             LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
             LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
+            LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
+            LEFT JOIN DIRECTOR d ON d.ID = fd.DIRECTOR_ID
             ORDER BY f.ID
             """;
     private static final String DELETE_SQL = "DELETE FROM FILM WHERE ID = ?";
@@ -53,15 +57,41 @@ public class FilmRepository extends BaseRepository<Film> {
                 f.MPA_ID, m.NAME AS MPA_NAME,
                 g.ID AS GENRE_ID, g.NAME AS GENRE_NAME,
                 fl.USER_ID,
-                COUNT(fl.USER_ID) OVER (PARTITION BY f.ID) AS LIKE_COUNT
+                COUNT(fl.USER_ID) OVER (PARTITION BY f.ID) AS LIKE_COUNT,
+                d.ID AS DIRECTOR_ID, d.NAME AS DIRECTOR_NAME
             FROM FILM f
             JOIN MPA_RATING m ON f.MPA_ID = m.ID
             LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
             LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
             LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
+            LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
+            LEFT JOIN DIRECTOR d ON d.ID = fd.DIRECTOR_ID
             ORDER BY LIKE_COUNT DESC
             LIMIT ?
             """;
+
+    private static final String GET_FILMS_BY_DIRECTOR = """
+            SELECT
+                f.ID AS FILM_ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION,
+                f.MPA_ID, m.NAME AS MPA_NAME,
+                g.ID AS GENRE_ID, g.NAME AS GENRE_NAME,
+                fl.USER_ID,
+                COUNT(fl.USER_ID) OVER (PARTITION BY f.ID) AS LIKES,
+                EXTRACT(YEAR FROM f.RELEASE_DATE) AS YEARS,
+                d.ID AS DIRECTOR_ID, d.NAME AS DIRECTOR_NAME
+            FROM FILM f
+                     JOIN MPA_RATING m ON f.MPA_ID = m.ID
+                     LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
+                     LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
+                     LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
+                     LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
+                     LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
+                     LEFT JOIN DIRECTOR d ON d.ID = fd.DIRECTOR_ID
+            WHERE fd.DIRECTOR_ID = ?
+            """;
+    private static final String INSERT_DIRECTOR_SQL = "INSERT INTO FILM_DIRECTOR (FILM_ID, DIRECTOR_ID) VALUES (?, ?)";
+    private static final String DELETE_DIRECTOR_SQL = "DELETE FROM FILM_DIRECTOR WHERE FILM_ID = ?";
+    private static final String GET_DIRECTORS_SQL = "SELECT d.* FROM DIRECTOR AS d JOIN FILM_DIRECTOR AS fd ON d.ID = fd.DIRECTOR_ID WHERE fd.FILM_ID = ?";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -79,7 +109,17 @@ public class FilmRepository extends BaseRepository<Film> {
             ps.setLong(5, f.getMpa().getId());
         }, film);
         updateFilmGenres(insertedFilm.getId(), film.getGenres());
+        updateFilmDirectors(insertedFilm.getId(), film.getDirectors());
         return insertedFilm;
+    }
+
+    private void updateFilmDirectors(Long filmId, Set<Director> directors) {
+        if (directors == null || directors.isEmpty()) {
+            return;
+        }
+        jdbcTemplate.batchUpdate(INSERT_DIRECTOR_SQL, directors.stream()
+                .map(director -> new Object[]{filmId, director.getId()})
+                .collect(Collectors.toList()));
     }
 
     public Film update(Film film) throws ConditionsException {
@@ -93,6 +133,8 @@ public class FilmRepository extends BaseRepository<Film> {
         }, film);
         jdbcTemplate.update(DELETE_GENRES_SQL, film.getId());
         updateFilmGenres(film.getId(), film.getGenres());
+        jdbcTemplate.update(DELETE_DIRECTOR_SQL, film.getId());
+        updateFilmDirectors(film.getId(), film.getDirectors());
         return updatedFilm;
     }
 
@@ -101,6 +143,7 @@ public class FilmRepository extends BaseRepository<Film> {
         film.ifPresent(f -> {
             f.setGenres(getFilmGenres(f.getId()));
             f.setLikes(getFilmLikes(f.getId()));
+            f.setDirectors(getFilmDirectors(f.getId()));
         });
         return film;
     }
@@ -113,7 +156,20 @@ public class FilmRepository extends BaseRepository<Film> {
         Film film = findByIdOrThrow(FIND_BY_ID_SQL, id, this::mapToFilm);
         film.setGenres(getFilmGenres(film.getId()));
         film.setLikes(getFilmLikes(film.getId()));
+        film.setDirectors(getFilmDirectors(film.getId()));
         return film;
+    }
+
+    private Set<Director> getFilmDirectors(Long filmId) {
+        return jdbcTemplate.query(GET_DIRECTORS_SQL, (rs, rowNum) -> mapToDirector(rs), filmId)
+                .stream()
+                .collect(Collectors.toSet());
+    }
+
+    private Director mapToDirector(ResultSet rs) throws SQLException {
+        return new Director(
+                rs.getLong("ID"),
+                rs.getString("NAME"));
     }
 
     private void updateFilmGenres(Long filmId, Set<Genre> genres) {
@@ -190,6 +246,12 @@ public class FilmRepository extends BaseRepository<Film> {
         if (!rs.wasNull()) {
             film.getLikes().add(userId);
         }
+        Long directorId = rs.getLong("DIRECTOR_ID");
+        if (!rs.wasNull()) {
+            film.getDirectors().add(new Director(
+                    directorId,
+                    rs.getString("DIRECTOR_NAME")));
+        }
         return film;
     }
 
@@ -211,5 +273,9 @@ public class FilmRepository extends BaseRepository<Film> {
         return new Genre(
                 rs.getLong("ID"),
                 rs.getString("NAME"));
+    }
+
+    public List<Film> getFilmByDirector(Long directorId, String sortBy) {
+        return executeFilmQuery(GET_FILMS_BY_DIRECTOR, directorId, sortBy);
     }
 }

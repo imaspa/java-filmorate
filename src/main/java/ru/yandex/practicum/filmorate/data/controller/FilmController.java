@@ -62,4 +62,9 @@ public class FilmController {
     public List<FilmDto> findPopular(@RequestParam(required = false, defaultValue = "10") Long count) {
         return filmService.findPopular(count);
     }
+
+    @GetMapping("/director/{directorId}")
+    public List<FilmDto> findByDirector(@PathVariable Long directorId, @RequestParam String sortBy) throws NotFoundException {
+        return filmService.findByDirector(directorId, sortBy);
+    }
 }
