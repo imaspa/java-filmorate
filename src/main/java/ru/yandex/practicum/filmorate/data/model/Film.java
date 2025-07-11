@@ -32,6 +32,8 @@ public class Film implements Identifiable {
 
     private Set<Long> likes;
 
+    private Set<Director> directors;
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;

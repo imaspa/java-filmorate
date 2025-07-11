@@ -38,4 +38,6 @@ public class FilmDto {
     private MpaRatingDto mpa;
 
     private Set<GenreDto> genres;
+
+    private Set<DirectorDto> directors;
 }
