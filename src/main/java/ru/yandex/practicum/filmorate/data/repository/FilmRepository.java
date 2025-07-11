@@ -71,23 +71,23 @@ public class FilmRepository extends BaseRepository<Film> {
             """;
 
     private static final String GET_FILMS_BY_DIRECTOR = """
-            SELECT
+            SELECT 
                 f.ID AS FILM_ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION,
                 f.MPA_ID, m.NAME AS MPA_NAME,
                 g.ID AS GENRE_ID, g.NAME AS GENRE_NAME,
-                fl.USER_ID,
+                fl.USER_ID AS USER_ID,
                 COUNT(fl.USER_ID) OVER (PARTITION BY f.ID) AS LIKES,
                 EXTRACT(YEAR FROM f.RELEASE_DATE) AS YEARS,
                 d.ID AS DIRECTOR_ID, d.NAME AS DIRECTOR_NAME
-            FROM FILM f
+            FROM FILM AS f
                      JOIN MPA_RATING m ON f.MPA_ID = m.ID
                      LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
                      LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
                      LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
                      LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
-                     LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
                      LEFT JOIN DIRECTOR d ON d.ID = fd.DIRECTOR_ID
             WHERE fd.DIRECTOR_ID = ?
+            %s
             """;
     private static final String INSERT_DIRECTOR_SQL = "INSERT INTO FILM_DIRECTOR (FILM_ID, DIRECTOR_ID) VALUES (?, ?)";
     private static final String DELETE_DIRECTOR_SQL = "DELETE FROM FILM_DIRECTOR WHERE FILM_ID = ?";
@@ -235,6 +235,7 @@ public class FilmRepository extends BaseRepository<Film> {
                 .mpa(new MpaRating(rs.getLong("MPA_ID"), rs.getString("MPA_NAME")))
                 .genres(new HashSet<>())
                 .likes(new HashSet<>())
+                .directors(new HashSet<>())
                 .build();
         Long genreId = rs.getLong("GENRE_ID");
         if (!rs.wasNull()) {
@@ -276,6 +277,17 @@ public class FilmRepository extends BaseRepository<Film> {
     }
 
     public List<Film> getFilmByDirector(Long directorId, String sortBy) {
-        return executeFilmQuery(GET_FILMS_BY_DIRECTOR, directorId, sortBy);
+        String sql = GET_FILMS_BY_DIRECTOR;
+        String orderby = "ID";
+        if (sortBy != null) {
+            if (sortBy.equals("year")) {
+                orderby = "YEARS";
+            }
+            if (sortBy.equals("likes")) {
+                orderby = "LIKES DESC";
+            }
+        }
+        sql = String.format(sql, String.format(" ORDER BY %s", orderby));
+        return executeFilmQuery(sql, directorId).stream().distinct().toList();
     }
 }
