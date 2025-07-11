@@ -71,7 +71,7 @@ public class FilmRepository extends BaseRepository<Film> {
             """;
 
     private static final String GET_FILMS_BY_DIRECTOR = """
-            SELECT 
+            SELECT
                 f.ID AS FILM_ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION,
                 f.MPA_ID, m.NAME AS MPA_NAME,
                 g.ID AS GENRE_ID, g.NAME AS GENRE_NAME,
