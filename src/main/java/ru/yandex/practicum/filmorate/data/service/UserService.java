@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.data.service;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -9,9 +10,12 @@ import ru.yandex.practicum.filmorate.data.dto.UserDto;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.data.mapper.UserMapper;
+import ru.yandex.practicum.filmorate.data.model.Film;
 import ru.yandex.practicum.filmorate.data.model.User;
+import ru.yandex.practicum.filmorate.data.repository.FilmRepository;
 import ru.yandex.practicum.filmorate.data.repository.UserRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -22,6 +26,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository repository;
+    private final FilmRepository filmRepository;
     private final UserMapper mapper;
 
     public UserDto add(@Valid UserDto userDto) throws ConditionsException {
@@ -110,4 +115,21 @@ public class UserService {
         log.info("Общие друзья пользователей (стоп). пользователь 1: {} пользователь 2: {}", userId, otherId);
         return commonFriends;
     }
+
+    public List<Film> getRecommendations(Long idUser) throws NotFoundException {
+        List<Long> sameUserIds = filmRepository.getUsersWithSameLikes(idUser);
+        log.debug("Получаем рекомендации для пользователя с ID {}", idUser);
+        if (sameUserIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> recommendations = filmRepository.getFilmRecommendations(idUser, sameUserIds);
+        List<Film> films = new ArrayList<>();
+        for (Long recommendation : recommendations) {
+            Film byIdOrThrow = filmRepository.findByIdOrThrow(recommendation);
+            films.add(byIdOrThrow);
+        }
+        log.debug("Рекомендации для пользователя с ID {}:{}", idUser, films);
+        return films;
+    }
+
 }
