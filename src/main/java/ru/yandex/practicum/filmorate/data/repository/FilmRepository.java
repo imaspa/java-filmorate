@@ -12,10 +12,7 @@ import ru.yandex.practicum.filmorate.data.model.MpaRating;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Repository
@@ -290,4 +287,39 @@ public class FilmRepository extends BaseRepository<Film> {
         sql = String.format(sql, String.format(" ORDER BY %s", orderby));
         return executeFilmQuery(sql, directorId).stream().distinct().toList();
     }
+
+    public List<Long> getUsersWithSameLikes(Long userId) {
+        final String sqlQuery = """
+                SELECT fl.user_id, count(fl.film_id) rate
+                FROM film_like ul
+                JOIN film_like fl ON (ul.film_id = fl.film_id AND ul.user_id != fl.user_id)
+                JOIN users u ON (fl.user_id != u.id)
+                WHERE ul.user_id = ?
+                GROUP BY fl.user_id
+                having rate > 1
+                ORDER BY rate desc
+                limit 10
+                """;
+        return jdbcTemplate.query(sqlQuery, (rs, rowNum) -> rs.getLong("user_id"), userId);
+    }
+
+    public List<Long> getFilmRecommendations(Long userId, List<Long> sameUserIds) {
+        String sqlQuery = """
+                SELECT fl.film_id
+                FROM film_like fl
+                WHERE fl.user_id IN (%s)
+                  AND fl.film_id NOT IN (
+                    SELECT ul.film_id
+                    FROM film_like ul
+                    WHERE ul.user_id = ?
+                )
+                """;
+        String placeholders = String.join(", ", Collections.nCopies(sameUserIds.size(), "?"));
+        sqlQuery = String.format(sqlQuery, placeholders);
+        Object[] args = new Object[sameUserIds.size() + 1];
+        System.arraycopy(sameUserIds.toArray(), 0, args, 0, sameUserIds.size());
+        args[sameUserIds.size()] = userId;
+        return jdbcTemplate.queryForList(sqlQuery, args, Long.class);
+    }
+
 }
