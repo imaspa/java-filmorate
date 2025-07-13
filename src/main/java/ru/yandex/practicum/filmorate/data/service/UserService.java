@@ -115,9 +115,9 @@ public class UserService {
         return commonFriends;
     }
 
-    public List<Film> getRecommendations(Long idUser) throws NotFoundException {
-        List<Long> sameUserIds = filmRepository.getUsersWithSameLikes(idUser);
-        log.debug("Получаем рекомендации для пользователя с ID {}", idUser);
+    public List<Film> getRecommendations(Long idUser, Integer limit) throws NotFoundException {
+        List<Long> sameUserIds = filmRepository.getUsersWithSameLikes(idUser, limit);
+        log.debug("Рекомендации для пользователя (старт). Id пользователя {}", idUser);
         if (sameUserIds.isEmpty()) {
             return List.of();
         }
@@ -127,7 +127,7 @@ public class UserService {
             Film byIdOrThrow = filmRepository.findByIdOrThrow(recommendation);
             films.add(byIdOrThrow);
         }
-        log.debug("Рекомендации для пользователя с ID {}:{}", idUser, films);
+        log.debug("Рекомендации для пользователя (стоп). Id пользователя: {}, Id фильмов: {}", idUser, films);
         return films;
     }
 
