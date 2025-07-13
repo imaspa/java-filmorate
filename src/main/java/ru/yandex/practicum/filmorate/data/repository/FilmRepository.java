@@ -12,7 +12,11 @@ import ru.yandex.practicum.filmorate.data.model.MpaRating;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Repository
@@ -89,7 +93,27 @@ public class FilmRepository extends BaseRepository<Film> {
     private static final String INSERT_DIRECTOR_SQL = "INSERT INTO FILM_DIRECTOR (FILM_ID, DIRECTOR_ID) VALUES (?, ?)";
     private static final String DELETE_DIRECTOR_SQL = "DELETE FROM FILM_DIRECTOR WHERE FILM_ID = ?";
     private static final String GET_DIRECTORS_SQL = "SELECT d.* FROM DIRECTOR AS d JOIN FILM_DIRECTOR AS fd ON d.ID = fd.DIRECTOR_ID WHERE fd.FILM_ID = ?";
-
+    private static String GET_RECOMMENDATIONS_SQL = """
+                SELECT fl.film_id
+                FROM film_like fl
+                WHERE fl.user_id IN (%s)
+                  AND fl.film_id NOT IN (
+                    SELECT ul.film_id
+                    FROM film_like ul
+                    WHERE ul.user_id = ?
+                    )
+                """;
+    private static final String GET_USERS_WITH_SAME_LIKES_SQL = """
+                SELECT fl.user_id, COUNT(fl.film_id) AS rate
+                FROM film_like ul
+                JOIN film_like fl ON ul.film_id = fl.film_id
+                JOIN users u ON (fl.user_id != u.id)
+                WHERE ul.user_id = ? AND ul.user_id != fl.user_id
+                GROUP BY fl.user_id
+                HAVING rate > 1
+                ORDER BY rate DESC
+                LIMIT ?
+                """;
     private final JdbcTemplate jdbcTemplate;
 
     public FilmRepository(JdbcTemplate jdbcTemplate) {
@@ -288,38 +312,20 @@ public class FilmRepository extends BaseRepository<Film> {
         return executeFilmQuery(sql, directorId).stream().distinct().toList();
     }
 
-    public List<Long> getUsersWithSameLikes(Long userId) {
-        final String sqlQuery = """
-                SELECT fl.user_id, count(fl.film_id) rate
-                FROM film_like ul
-                JOIN film_like fl ON (ul.film_id = fl.film_id AND ul.user_id != fl.user_id)
-                JOIN users u ON (fl.user_id != u.id)
-                WHERE ul.user_id = ?
-                GROUP BY fl.user_id
-                having rate > 1
-                ORDER BY rate desc
-                limit 10
-                """;
-        return jdbcTemplate.query(sqlQuery, (rs, rowNum) -> rs.getLong("user_id"), userId);
+    public List<Long> getUsersWithSameLikes(Long userId, Integer limit) {
+        return jdbcTemplate.query(GET_USERS_WITH_SAME_LIKES_SQL, (rs, rowNum) -> rs.getLong("user_id"), userId, limit);
     }
 
     public List<Long> getFilmRecommendations(Long userId, List<Long> sameUserIds) {
-        String sqlQuery = """
-                SELECT fl.film_id
-                FROM film_like fl
-                WHERE fl.user_id IN (%s)
-                  AND fl.film_id NOT IN (
-                    SELECT ul.film_id
-                    FROM film_like ul
-                    WHERE ul.user_id = ?
-                )
-                """;
+        if (sameUserIds.isEmpty()) {
+            return Collections.emptyList();
+        }
         String placeholders = String.join(", ", Collections.nCopies(sameUserIds.size(), "?"));
-        sqlQuery = String.format(sqlQuery, placeholders);
+        GET_RECOMMENDATIONS_SQL = String.format(GET_RECOMMENDATIONS_SQL, placeholders);
         Object[] args = new Object[sameUserIds.size() + 1];
         System.arraycopy(sameUserIds.toArray(), 0, args, 0, sameUserIds.size());
         args[sameUserIds.size()] = userId;
-        return jdbcTemplate.queryForList(sqlQuery, args, Long.class);
+        return jdbcTemplate.queryForList(GET_RECOMMENDATIONS_SQL, args, Long.class);
     }
 
 }

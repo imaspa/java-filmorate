@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.yandex.practicum.filmorate.data.dto.UserDto;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
@@ -69,8 +70,8 @@ public class UserController {
     }
 
     @GetMapping("/{id}/recommendations")
-    public List<Film> getRecommendations(@PathVariable Long id) throws NotFoundException {
-        return userService.getRecommendations(id);
+    public List<Film> getRecommendations(@PathVariable Long id, @RequestParam(required = false, defaultValue = "10") Integer limit) throws NotFoundException {
+        return userService.getRecommendations(id, limit);
     }
 
 }
