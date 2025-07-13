@@ -84,12 +84,8 @@ public class FilmService {
         log.info("Удалить лайк (стоп). Пользователь: {}, фильм: {}", userId, filmId);
     }
 
-    public List<FilmDto> findPopular(Long limit) {
-        log.info("Популярные фильмы. Лимит: {}", limit);
-        return repository.getPopularFilms(limit)
-                .stream()
-                .map(mapper::toDto)
-                .toList();
+    public List<Film> getPopularFilms(Long count, Integer year, Integer genreId) {
+        return repository.getPopularFilms(count, year, genreId);
     }
 
     private void validateFilmRelations(Film film) throws NotFoundException {
