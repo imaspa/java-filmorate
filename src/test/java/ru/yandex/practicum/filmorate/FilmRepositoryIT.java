@@ -159,7 +159,7 @@ class FilmRepositoryIT {
         // Добавляем лайк
         filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
 
-        List<Film> popularFilms = filmRepository.getPopularFilms(1L);
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L, 1111, 2);
         assertThat(popularFilms)
                 .hasSize(1)
                 .extracting(Film::getId)

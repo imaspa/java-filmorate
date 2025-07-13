@@ -12,6 +12,7 @@ import ru.yandex.practicum.filmorate.data.model.MpaRating;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -53,23 +54,21 @@ public class FilmRepository extends BaseRepository<Film> {
     private static final String REMOVE_LIKE_SQL = "DELETE FROM FILM_LIKE WHERE FILM_ID = ? AND USER_ID = ?";
     private static final String GET_LIKES_SQL = "SELECT USER_ID FROM FILM_LIKE WHERE FILM_ID = ?";
     private static final String GET_POPULAR_FILMS_SQL = """
-            SELECT
-                f.ID AS FILM_ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION,
-                f.MPA_ID, m.NAME AS MPA_NAME,
-                g.ID AS GENRE_ID, g.NAME AS GENRE_NAME,
-                fl.USER_ID,
-                COUNT(fl.USER_ID) OVER (PARTITION BY f.ID) AS LIKE_COUNT,
-                d.ID AS DIRECTOR_ID, d.NAME AS DIRECTOR_NAME
-            FROM FILM f
-            JOIN MPA_RATING m ON f.MPA_ID = m.ID
-            LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
-            LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
-            LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
-            LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
-            LEFT JOIN DIRECTOR d ON d.ID = fd.DIRECTOR_ID
-            ORDER BY LIKE_COUNT DESC
-            LIMIT ?
-            """;
+ SELECT
+               f.ID AS FILM_ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION,
+               f.MPA_ID, m.NAME AS MPA_NAME,
+               g.ID AS GENRE_ID, g.NAME AS GENRE_NAME,
+               fl.USER_ID,
+               COUNT(fl.USER_ID) OVER (PARTITION BY f.ID) AS LIKE_COUNT,
+               d.ID AS DIRECTOR_ID, d.NAME AS DIRECTOR_NAME
+           FROM FILM f
+           JOIN MPA_RATING m ON f.MPA_ID = m.ID
+           LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
+           LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
+           LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
+           LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
+           LEFT JOIN DIRECTOR d ON d.ID = fd.DIRECTOR_ID
+ """;
 
     private static final String GET_FILMS_BY_DIRECTOR = """
             SELECT
@@ -232,8 +231,30 @@ public class FilmRepository extends BaseRepository<Film> {
                 .collect(Collectors.toSet());
     }
 
-    public List<Film> getPopularFilms(Long limit) {
-        return executeFilmQuery(GET_POPULAR_FILMS_SQL, limit);
+    public List<Film> getPopularFilms(Long count, Integer year, Integer genreId) {
+        String newsql = "";
+        List<Object> params = new ArrayList<>();
+        if (year != null || genreId != null) {
+            newsql += " WHERE ";
+            if (year != null) {
+                newsql += "YEAR(f.RELEASE_DATE) = ? ";
+                params.add(year);
+                if (genreId != null) {
+                    newsql += "AND ";
+                }
+            }
+            if (genreId != null) {
+                newsql += "fg.GENRE_ID = ? ";
+                params.add(genreId);
+            }
+        }
+        String sql = GET_POPULAR_FILMS_SQL + newsql +
+           """
+           ORDER BY LIKE_COUNT DESC
+           LIMIT ?
+           """;
+        params.add(count);
+        return jdbcTemplate.query(sql, this::mapFilmResultSet, params.toArray());
     }
 
     public List<Film> findAll() {
