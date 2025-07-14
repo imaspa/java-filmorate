@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import ru.yandex.practicum.filmorate.data.dto.EventLogDto;
 import ru.yandex.practicum.filmorate.data.dto.UserDto;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
@@ -54,9 +55,9 @@ public class UserController {
         userService.addFriend(id, friendId);
     }
 
-    @DeleteMapping("/{id}/friends/{friendId}")
-    public void removeFriend(@PathVariable Long id, @PathVariable Long friendId) throws NotFoundException {
-        userService.removeFriend(id, friendId);
+    @DeleteMapping("/{userId}/friends/{friendId}")
+    public void removeFriend(@PathVariable Long userId, @PathVariable Long friendId) throws NotFoundException, ConditionsException {
+        userService.removeFriend(userId, friendId);
     }
 
     @GetMapping("/{id}/friends")
@@ -73,5 +74,11 @@ public class UserController {
     public List<Film> getRecommendations(@PathVariable Long id, @RequestParam(required = false, defaultValue = "10") Integer limit) throws NotFoundException {
         return userService.getRecommendations(id, limit);
     }
+
+    @GetMapping("/{userId}/feed")
+    public List<EventLogDto> getFeedByUserId(@PathVariable Long userId, @RequestParam(defaultValue = "100") Long limit) throws NotFoundException {
+        return userService.getFeedByUserId(userId, limit);
+    }
+
 
 }

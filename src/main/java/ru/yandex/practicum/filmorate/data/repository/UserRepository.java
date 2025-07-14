@@ -21,8 +21,6 @@ public class UserRepository extends BaseRepository<User> {
     private static final String DELETE_SQL = "DELETE FROM USERS WHERE ID = ?";
 
     // друзья
-    private static final String ADD_FRIEND_SQL = "INSERT INTO FRIENDSHIP (USER_ID, FRIEND_ID, ISFRIEND) VALUES (?, ?, ?)";
-    private static final String REMOVE_FRIEND_SQL = "DELETE FROM FRIENDSHIP WHERE USER_ID = ? AND FRIEND_ID = ?";
     private static final String GET_FRIENDS_SQL = "SELECT u.* FROM USERS u JOIN FRIENDSHIP f ON u.ID = f.FRIEND_ID WHERE f.USER_ID = ?";
     private static final String GET_COMMON_FRIENDS_SQL = "SELECT u.* FROM USERS u JOIN FRIENDSHIP f1 ON u.ID = f1.FRIEND_ID " +
             "JOIN FRIENDSHIP f2 ON u.ID = f2.FRIEND_ID WHERE f1.USER_ID = ? AND f2.USER_ID = ?";
@@ -68,14 +66,6 @@ public class UserRepository extends BaseRepository<User> {
     }
 
     //-- Друзья
-    public void addFriend(Long userId, Long friendId, Boolean isFriend) {
-        jdbcTemplate.update(ADD_FRIEND_SQL, userId, friendId, isFriend);
-    }
-
-    public void removeFriend(Long userId, Long friendId) {
-        jdbcTemplate.update(REMOVE_FRIEND_SQL, userId, friendId);
-    }
-
     public List<User> getFriends(Long userId) {
         return jdbcTemplate.query(GET_FRIENDS_SQL, (rs, rowNum) -> mapToUser(rs), userId);
     }

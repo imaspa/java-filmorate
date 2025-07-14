@@ -5,12 +5,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
+import ru.yandex.practicum.filmorate.data.dto.EventLogDto;
 import ru.yandex.practicum.filmorate.data.dto.UserDto;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.data.mapper.EventLogMapper;
 import ru.yandex.practicum.filmorate.data.mapper.UserMapper;
 import ru.yandex.practicum.filmorate.data.model.Film;
 import ru.yandex.practicum.filmorate.data.model.User;
+import ru.yandex.practicum.filmorate.data.repository.EventLogRepository;
 import ru.yandex.practicum.filmorate.data.repository.FilmRepository;
 import ru.yandex.practicum.filmorate.data.repository.UserRepository;
 
@@ -26,7 +29,10 @@ import java.util.stream.Collectors;
 public class UserService {
     private final UserRepository repository;
     private final FilmRepository filmRepository;
+    private final EventLogRepository eventLogRepository;
+    private final FriendshipService friendshipService;
     private final UserMapper mapper;
+    private final EventLogMapper eventLogMapper;
 
     public UserDto add(@Valid UserDto userDto) throws ConditionsException {
         log.info("Создание пользователя (старт). Логин: {}", userDto.getLogin());
@@ -58,7 +64,6 @@ public class UserService {
         return mapper.toDto(repository.findByIdOrThrow(userId));
     }
 
-
     public void addFriend(Long userId, Long friendId) throws NotFoundException, ConditionsException {
         log.info("Добавление в друзья (старт). кто: {} к кому: {}", friendId, userId);
         repository.findByIdOrThrow(userId);
@@ -68,19 +73,18 @@ public class UserService {
             throw new ConditionsException("Нельзя добавить самого себя в друзья");
         }
 
-        // Добавляем дружбу (статус false - запрос на дружбу)
-        repository.addFriend(userId, friendId, false);
+        friendshipService.addFriend(userId, friendId, false);
         log.info("Добавление в друзья (стоп). кто: {} к кому: {}", friendId, userId);
     }
 
-    public void removeFriend(Long userId, Long friendId) throws NotFoundException {
+    public void removeFriend(Long userId, Long friendId) throws NotFoundException, ConditionsException {
         log.info("Удаление из друзей (старт). кто: {} от кого: {}", friendId, userId);
 
         // Проверка существования пользователей
         repository.findByIdOrThrow(userId);
         repository.findByIdOrThrow(friendId);
 
-        repository.removeFriend(userId, friendId);
+        friendshipService.removeFriend(userId, friendId);
         log.info("Удаление из друзей (стоп). кто: {} от кого: {}", friendId, userId);
     }
 
@@ -129,6 +133,21 @@ public class UserService {
         }
         log.debug("Рекомендации для пользователя (стоп). Id пользователя: {}, Id фильмов: {}", idUser, films);
         return films;
+    }
+
+    public List<EventLogDto> getFeedByUserId(Long userId, Long limit) throws NotFoundException {
+        log.info("Лента событий (старт) userId: {}", userId);
+        var feed = eventLogRepository.getFeedByUserId(userId, limit)
+                .stream()
+                .map(eventLogMapper::toDto)
+                .collect(Collectors.toList());
+
+        log.info("Лента событий (стоп): userId: {}", userId);
+        return feed;
+    }
+
+    public UserDto findById(Long userId) throws NotFoundException {
+        return mapper.toDto(repository.findByIdOrThrow(userId));
     }
 
 }

@@ -92,27 +92,27 @@ public class FilmRepository extends BaseRepository<Film> {
     private static final String INSERT_DIRECTOR_SQL = "INSERT INTO FILM_DIRECTOR (FILM_ID, DIRECTOR_ID) VALUES (?, ?)";
     private static final String DELETE_DIRECTOR_SQL = "DELETE FROM FILM_DIRECTOR WHERE FILM_ID = ?";
     private static final String GET_DIRECTORS_SQL = "SELECT d.* FROM DIRECTOR AS d JOIN FILM_DIRECTOR AS fd ON d.ID = fd.DIRECTOR_ID WHERE fd.FILM_ID = ?";
-    private static String GET_RECOMMENDATIONS_SQL = """
-                SELECT fl.film_id
-                FROM film_like fl
-                WHERE fl.user_id IN (%s)
-                  AND fl.film_id NOT IN (
-                    SELECT ul.film_id
-                    FROM film_like ul
-                    WHERE ul.user_id = ?
-                    )
-                """;
     private static final String GET_USERS_WITH_SAME_LIKES_SQL = """
-                SELECT fl.user_id, COUNT(fl.film_id) AS rate
+            SELECT fl.user_id, COUNT(fl.film_id) AS rate
+            FROM film_like ul
+            JOIN film_like fl ON ul.film_id = fl.film_id
+            JOIN users u ON (fl.user_id != u.id)
+            WHERE ul.user_id = ? AND ul.user_id != fl.user_id
+            GROUP BY fl.user_id
+            HAVING rate > 1
+            ORDER BY rate DESC
+            LIMIT ?
+            """;
+    private static String GET_RECOMMENDATIONS_SQL = """
+            SELECT fl.film_id
+            FROM film_like fl
+            WHERE fl.user_id IN (%s)
+              AND fl.film_id NOT IN (
+                SELECT ul.film_id
                 FROM film_like ul
-                JOIN film_like fl ON ul.film_id = fl.film_id
-                JOIN users u ON (fl.user_id != u.id)
-                WHERE ul.user_id = ? AND ul.user_id != fl.user_id
-                GROUP BY fl.user_id
-                HAVING rate > 1
-                ORDER BY rate DESC
-                LIMIT ?
-                """;
+                WHERE ul.user_id = ?
+                )
+            """;
     private final JdbcTemplate jdbcTemplate;
 
     public FilmRepository(JdbcTemplate jdbcTemplate) {
@@ -168,16 +168,16 @@ public class FilmRepository extends BaseRepository<Film> {
         return film;
     }
 
-    public int deleteById(Long id) {
-        return deleteById(DELETE_SQL, id);
-    }
-
     public Film findByIdOrThrow(Long id) throws NotFoundException {
         Film film = findByIdOrThrow(FIND_BY_ID_SQL, id, this::mapToFilm);
         film.setGenres(getFilmGenres(film.getId()));
         film.setLikes(getFilmLikes(film.getId()));
         film.setDirectors(getFilmDirectors(film.getId()));
         return film;
+    }
+
+    public int deleteById(Long id) {
+        return deleteById(DELETE_SQL, id);
     }
 
     private Set<Director> getFilmDirectors(Long filmId) {
