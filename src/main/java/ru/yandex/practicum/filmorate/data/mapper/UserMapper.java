@@ -15,7 +15,7 @@ public interface UserMapper {
     @Mapping(target = "id", ignore = true)
     User map(@MappingTarget User entity, UserDto dto);
 
-    UserDto toDto(User film);
+    UserDto toDto(User entity);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "name", source = "dto", qualifiedByName = "prepareName")

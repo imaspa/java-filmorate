@@ -14,7 +14,6 @@ import java.util.Optional;
 
 @Repository
 public class ReviewRepository extends BaseRepository<Review> {
-    private final JdbcTemplate jdbcTemplate;
     private static final String INSERT_SQL = "INSERT INTO REVIEW (user_id, film_id, content, is_positive, useful) VALUES (?,?,?,?,?)";
     private static final String UPDATE_SQL = "UPDATE REVIEW SET user_id = ?,film_id = ?,content = ?,is_positive = ? WHERE id=?";
     private static final String FIND_BY_ID_SQL = "SELECT * FROM REVIEW WHERE id = ?";
@@ -26,6 +25,7 @@ public class ReviewRepository extends BaseRepository<Review> {
     private static final String LIKE = "MERGE INTO REVIEW_LIKE(review_id, user_id, is_dislike) VALUES (?,?,?)";
     private static final String DELETE_LIKE = "DELETE FROM REVIEW_LIKE WHERE REVIEW_ID = ? AND USER_ID = ?";
     private static final String SELECT_LIKE = "SELECT is_dislike FROM REVIEW_LIKE WHERE REVIEW_ID = ? AND USER_ID = ? LIMIT 1";
+    private final JdbcTemplate jdbcTemplate;
 
     public ReviewRepository(JdbcTemplate jdbcTemplate) {
         super(jdbcTemplate);
@@ -59,6 +59,10 @@ public class ReviewRepository extends BaseRepository<Review> {
         return review;
     }
 
+    public Optional<Review> findById(Long id) throws NotFoundException {
+        return findById(FIND_BY_ID_SQL, id, this::mapToReview);
+    }
+
     private Review mapToReview(ResultSet rs) throws SQLException {
         return Review.builder()
                 .id(rs.getLong("ID"))
@@ -88,7 +92,7 @@ public class ReviewRepository extends BaseRepository<Review> {
     public void addLike(Long id, Long userid, boolean isDislike) {
         Optional<Boolean> isDislikeInBD = getIsDislike(id, userid);
         int count = jdbcTemplate.update(LIKE, id, userid, isDislike);
-        if (!isDislikeInBD.isEmpty()) {
+        if (isDislikeInBD.isPresent()) {
             if (isDislikeInBD.get().equals(isDislike)) return;
             count++;
         }

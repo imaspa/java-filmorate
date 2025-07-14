@@ -33,14 +33,14 @@ public class ReviewController {
         return service.update(reviewDto);
     }
 
-    @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
-        service.delete(id);
+    @DeleteMapping("/{reviewId}")
+    public void delete(@PathVariable Long reviewId) throws ConditionsException, NotFoundException {
+        service.delete(reviewId);
     }
 
-    @GetMapping("/{id}")
-    public ReviewDto getById(@PathVariable Long id) throws NotFoundException {
-        return service.getById(id);
+    @GetMapping("/{reviewId}")
+    public ReviewDto getById(@PathVariable Long reviewId) throws NotFoundException {
+        return service.getById(reviewId);
     }
 
     @GetMapping()
@@ -50,24 +50,24 @@ public class ReviewController {
         return service.getAll(filmId, count);
     }
 
-    @PutMapping("/{id}/like/{userid}")
-    public ReviewDto addLike(@PathVariable Long id, @PathVariable Long userid) throws NotFoundException {
-        return service.addLike(id, userid, false);
+    @PutMapping("/{reviewId}/like/{userId}")
+    public ReviewDto addLike(@PathVariable Long reviewId, @PathVariable Long userId) throws NotFoundException, ConditionsException {
+        return service.addLike(reviewId, userId, false);
     }
 
-    @PutMapping("/{id}/dislike/{userid}")
-    public ReviewDto addDislike(@PathVariable Long id, @PathVariable Long userid) throws NotFoundException {
-        return service.addLike(id, userid, true);
+    @PutMapping("/{reviewId}/dislike/{userId}")
+    public ReviewDto addDislike(@PathVariable Long reviewId, @PathVariable Long userId) throws NotFoundException, ConditionsException {
+        return service.addLike(reviewId, userId, true);
     }
 
-    @DeleteMapping("/{id}/like/{userid}")
-    public void deleteLike(@PathVariable Long id, @PathVariable Long userid) throws NotFoundException {
-        service.deleteLike(id, userid);
+    @DeleteMapping("/{reviewId}/like/{userId}")
+    public void deleteLike(@PathVariable Long reviewId, @PathVariable Long userId) throws NotFoundException, ConditionsException {
+        service.deleteLike(reviewId, userId);
     }
 
-    @DeleteMapping("/{id}/dislike/{userid}")
-    public void deleteDislike(@PathVariable Long id, @PathVariable Long userid) throws NotFoundException {
-        service.deleteLike(id, userid);
+    @DeleteMapping("/{reviewId}/dislike/{userId}")
+    public void deleteDislike(@PathVariable Long reviewId, @PathVariable Long userId) throws NotFoundException, ConditionsException {
+        service.deleteLike(reviewId, userId);
     }
 
 }

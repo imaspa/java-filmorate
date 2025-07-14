@@ -9,7 +9,9 @@ import lombok.NoArgsConstructor;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public class Friendship {
+public class Friendship implements Identifiable {
+
+    private Long id;
 
     private Long userId;
 

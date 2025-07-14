@@ -10,7 +10,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MpaRatingDto {
+
     private Long id;
+
     private String name;
+
     private String description;
 }

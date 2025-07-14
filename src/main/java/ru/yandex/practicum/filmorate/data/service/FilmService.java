@@ -12,6 +12,8 @@ import ru.yandex.practicum.filmorate.data.mapper.FilmMapper;
 import ru.yandex.practicum.filmorate.data.model.Director;
 import ru.yandex.practicum.filmorate.data.model.Film;
 import ru.yandex.practicum.filmorate.data.model.Genre;
+import ru.yandex.practicum.filmorate.data.model.constant.EventType;
+import ru.yandex.practicum.filmorate.data.model.constant.Operation;
 import ru.yandex.practicum.filmorate.data.repository.DirectorRepository;
 import ru.yandex.practicum.filmorate.data.repository.FilmRepository;
 import ru.yandex.practicum.filmorate.data.repository.GenreRepository;
@@ -33,6 +35,7 @@ public class FilmService {
     private final MpaRatingRepository repositoryMpaRating;
     private final GenreRepository repositoryGenre;
     private final DirectorRepository repositoryDirector;
+    private final EventLogService eventLogService;
 
 
     public FilmDto add(@Valid FilmDto filmDto) throws ConditionsException, NotFoundException {
@@ -72,6 +75,7 @@ public class FilmService {
         repositoryUser.findByIdOrThrow(userId);
         repository.findByIdOrThrow(filmId);
         repository.addLike(filmId, userId);
+        eventLogService.add(userId, filmId, EventType.LIKE, Operation.ADD);
         log.info("Добавить лайк фильму (стоп). Пользователь: {}, фильм: {}", userId, filmId);
     }
 
@@ -81,6 +85,7 @@ public class FilmService {
         repository.findByIdOrThrow(filmId);
 
         repository.removeLike(filmId, userId);
+        eventLogService.add(userId, filmId, EventType.LIKE, Operation.REMOVE);
         log.info("Удалить лайк (стоп). Пользователь: {}, фильм: {}", userId, filmId);
     }
 
