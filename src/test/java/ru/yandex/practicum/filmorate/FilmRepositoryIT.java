@@ -82,7 +82,6 @@ class FilmRepositoryIT {
                 .releaseDate(LocalDate.of(2020, 1, 1))
                 .duration(120)
                 .mpa(existingMpa1)
-                .genres(Collections.singleton(existingGenre))
                 .build();
 
         testFilm2 = Film.builder()
@@ -91,7 +90,6 @@ class FilmRepositoryIT {
                 .releaseDate(LocalDate.of(2021, 1, 1))
                 .duration(90)
                 .mpa(existingMpa2)
-                .genres(Collections.singleton(existingGenre))
                 .build();
     }
 
@@ -189,6 +187,8 @@ class FilmRepositoryIT {
         Film createdFilm1 = filmRepository.insert(testFilm1);
         filmRepository.insert(testFilm2);
 
+        testFilm1.setGenres(Collections.singleton(existingGenre));
+
         filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
 
         List<Film> popularFilms = filmRepository.getPopularFilms(1L, null,1L);
@@ -203,6 +203,8 @@ class FilmRepositoryIT {
         User createdUser = userRepository.insert(testUser);
         Film createdFilm1 = filmRepository.insert(testFilm1);
         filmRepository.insert(testFilm2);
+
+        testFilm1.setGenres(Collections.singleton(existingGenre));
 
         filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
 
