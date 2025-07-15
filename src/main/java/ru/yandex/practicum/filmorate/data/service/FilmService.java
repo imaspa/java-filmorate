@@ -84,8 +84,14 @@ public class FilmService {
         log.info("Удалить лайк (стоп). Пользователь: {}, фильм: {}", userId, filmId);
     }
 
-    public List<Film> getPopularFilms(Long count, Integer year, Integer genreId) {
-        return repository.getPopularFilms(count, year, genreId);
+    public List<FilmDto> getPopularFilms(Long count, Integer year, Long genreId) {
+        log.info("Получить список популярных фильмов (старт). Лимит: {}", count);
+        var result = repository.getPopularFilms(count, year, genreId)
+                .stream()
+                .map(mapper::toDto)
+                .toList();
+        log.info("Получить список популярных фильмов (стоп). Лимит: {}", count);
+        return result;
     }
 
     private void validateFilmRelations(Film film) throws NotFoundException {
