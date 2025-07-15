@@ -20,6 +20,7 @@ import ru.yandex.practicum.filmorate.data.repository.MpaRatingRepository;
 import ru.yandex.practicum.filmorate.data.repository.UserRepository;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -81,6 +82,7 @@ class FilmRepositoryIT {
                 .releaseDate(LocalDate.of(2020, 1, 1))
                 .duration(120)
                 .mpa(existingMpa1)
+                .genres(Collections.singleton(existingGenre))
                 .build();
 
         testFilm2 = Film.builder()
@@ -89,6 +91,7 @@ class FilmRepositoryIT {
                 .releaseDate(LocalDate.of(2021, 1, 1))
                 .duration(90)
                 .mpa(existingMpa2)
+                .genres(Collections.singleton(existingGenre))
                 .build();
     }
 
@@ -156,10 +159,54 @@ class FilmRepositoryIT {
         Film createdFilm1 = filmRepository.insert(testFilm1);
         filmRepository.insert(testFilm2);
 
-        // Добавляем лайк
         filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
 
-        List<Film> popularFilms = filmRepository.getPopularFilms(1L, 1111, 2);
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L, null, null);
+        assertThat(popularFilms)
+                .hasSize(1)
+                .extracting(Film::getId)
+                .containsExactly(createdFilm1.getId());
+    }
+
+    @Test
+    void shouldGetPopularFilmsByYears() throws ConditionsException, NotFoundException {
+        User createdUser = userRepository.insert(testUser);
+        Film createdFilm1 = filmRepository.insert(testFilm1);
+        filmRepository.insert(testFilm2);
+
+        filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
+
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L, 2020, null);
+        assertThat(popularFilms)
+                .hasSize(1)
+                .extracting(Film::getId)
+                .containsExactly(createdFilm1.getId());
+    }
+
+    @Test
+    void shouldGetPopularFilmsByGenre() throws ConditionsException, NotFoundException {
+        User createdUser = userRepository.insert(testUser);
+        Film createdFilm1 = filmRepository.insert(testFilm1);
+        filmRepository.insert(testFilm2);
+
+        filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
+
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L, null,1L);
+        assertThat(popularFilms)
+                .hasSize(1)
+                .extracting(Film::getId)
+                .containsExactly(createdFilm1.getId());
+    }
+
+    @Test
+    void shouldGetPopularFilmsByYearsAndGenre() throws ConditionsException, NotFoundException {
+        User createdUser = userRepository.insert(testUser);
+        Film createdFilm1 = filmRepository.insert(testFilm1);
+        filmRepository.insert(testFilm2);
+
+        filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
+
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L, 2020, 1L);
         assertThat(popularFilms)
                 .hasSize(1)
                 .extracting(Film::getId)

@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.data.repository;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import ru.yandex.practicum.filmorate.data.dto.FilmDto;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.data.model.Director;
@@ -231,7 +232,7 @@ public class FilmRepository extends BaseRepository<Film> {
                 .collect(Collectors.toSet());
     }
 
-    public List<Film> getPopularFilms(Long count, Integer year, Integer genreId) {
+    public List<Film> getPopularFilms(Long count, Integer year, Long genreId) {
         String newsql = "";
         List<Object> params = new ArrayList<>();
         if (year != null || genreId != null) {
