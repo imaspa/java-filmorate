@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.yandex.practicum.filmorate.data.dto.EventLogDto;
+import ru.yandex.practicum.filmorate.data.dto.FilmDto;
 import ru.yandex.practicum.filmorate.data.dto.UserDto;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.data.model.Film;
 import ru.yandex.practicum.filmorate.data.service.UserService;
 
 import java.util.List;
@@ -76,7 +76,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}/recommendations")
-    public List<Film> getRecommendations(@PathVariable Long id, @RequestParam(required = false, defaultValue = "10") Integer limit) throws NotFoundException {
+    public List<FilmDto> getRecommendations(@PathVariable Long id, @RequestParam(required = false, defaultValue = "10") Integer limit) throws NotFoundException {
         return userService.getRecommendations(id, limit);
     }
 
