@@ -183,11 +183,10 @@ class FilmRepositoryIT {
 
     @Test
     void shouldGetPopularFilmsByGenre() throws ConditionsException, NotFoundException {
+        testFilm1.setGenres(Collections.singleton(existingGenre));
         User createdUser = userRepository.insert(testUser);
         Film createdFilm1 = filmRepository.insert(testFilm1);
         filmRepository.insert(testFilm2);
-
-        testFilm1.setGenres(Collections.singleton(existingGenre));
 
         filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
 
@@ -200,11 +199,10 @@ class FilmRepositoryIT {
 
     @Test
     void shouldGetPopularFilmsByYearsAndGenre() throws ConditionsException, NotFoundException {
+        testFilm1.setGenres(Collections.singleton(existingGenre));
         User createdUser = userRepository.insert(testUser);
         Film createdFilm1 = filmRepository.insert(testFilm1);
         filmRepository.insert(testFilm2);
-
-        testFilm1.setGenres(Collections.singleton(existingGenre));
 
         filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
 
