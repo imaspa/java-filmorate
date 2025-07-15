@@ -6,10 +6,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 import ru.yandex.practicum.filmorate.data.dto.EventLogDto;
+import ru.yandex.practicum.filmorate.data.dto.FilmDto;
 import ru.yandex.practicum.filmorate.data.dto.UserDto;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.data.mapper.EventLogMapper;
+import ru.yandex.practicum.filmorate.data.mapper.FilmMapper;
 import ru.yandex.practicum.filmorate.data.mapper.UserMapper;
 import ru.yandex.practicum.filmorate.data.model.Film;
 import ru.yandex.practicum.filmorate.data.model.User;
@@ -32,6 +34,7 @@ public class UserService {
     private final EventLogRepository eventLogRepository;
     private final FriendshipService friendshipService;
     private final UserMapper mapper;
+    private final FilmMapper mapperFilm;
     private final EventLogMapper eventLogMapper;
 
     public UserDto add(@Valid UserDto userDto) throws ConditionsException {
@@ -119,20 +122,23 @@ public class UserService {
         return commonFriends;
     }
 
-    public List<Film> getRecommendations(Long idUser, Integer limit) throws NotFoundException {
+    public List<FilmDto> getRecommendations(Long idUser, Integer limit) throws NotFoundException {
         List<Long> sameUserIds = filmRepository.getUsersWithSameLikes(idUser, limit);
-        log.debug("Рекомендации для пользователя (старт). Id пользователя {}", idUser);
+        log.info("Рекомендации для пользователя (старт). Id пользователя {}", idUser);
         if (sameUserIds.isEmpty()) {
             return List.of();
         }
         List<Long> recommendations = filmRepository.getFilmRecommendations(idUser, sameUserIds);
         List<Film> films = new ArrayList<>();
         for (Long recommendation : recommendations) {
-            Film byIdOrThrow = filmRepository.findByIdOrThrow(recommendation);
-            films.add(byIdOrThrow);
+            Film film = filmRepository.findByIdOrThrow(recommendation);
+            films.add(film);
         }
-        log.debug("Рекомендации для пользователя (стоп). Id пользователя: {}, Id фильмов: {}", idUser, films);
-        return films;
+        log.info("Рекомендации для пользователя (стоп). Id пользователя: {}, Id фильмов: {}", idUser,
+                films.stream().map(Film::getId).collect(Collectors.toList()));
+        return films.stream()
+                .map(mapperFilm::toDto)
+                .collect(Collectors.toList());
     }
 
     public List<EventLogDto> getFeedByUserId(Long userId, Long limit) throws NotFoundException {
