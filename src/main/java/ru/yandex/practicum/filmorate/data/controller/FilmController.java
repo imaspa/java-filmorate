@@ -43,6 +43,11 @@ public class FilmController {
         return filmService.getAll();
     }
 
+    @GetMapping("/search")
+    public List<FilmDto> find(@RequestParam String query, @RequestParam String by) {
+        return filmService.find(query, by);
+    }
+
     @GetMapping("/{filmId}")
     public FilmDto getFilms(@PathVariable Long filmId) throws NotFoundException {
         return filmService.getFilms(filmId);

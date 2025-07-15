@@ -20,6 +20,7 @@ import ru.yandex.practicum.filmorate.data.repository.GenreRepository;
 import ru.yandex.practicum.filmorate.data.repository.MpaRatingRepository;
 import ru.yandex.practicum.filmorate.data.repository.UserRepository;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -131,5 +132,19 @@ public class FilmService {
                 .stream()
                 .map(mapper::toDto)
                 .toList();
+    }
+
+    public List<FilmDto> find(String query, String by) {
+        if (query == null || query.isBlank() || by == null || by.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        String[] searchParams = by.split(",");
+        List<Film> films = repository.searchFilms(query.trim(), searchParams);
+
+        return films.stream()
+                .distinct()
+                .map(mapper::toDto)
+                .collect(Collectors.toList());
     }
 }
