@@ -13,6 +13,14 @@ import java.time.ZoneOffset;
 
 @Mapper(config = CommonMapperConfiguration.class)
 public interface EventLogMapper {
+    @Named("localDateToTimestamp")
+    static long localDateToTimestamp(LocalDate date) {
+        if (date == null) {
+            return 0L;
+        }
+        return date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
+    }
+
     @Mapping(target = "id", ignore = true)
     EventLog map(@MappingTarget EventLog entity, EventLogDto dto);
 
@@ -22,12 +30,4 @@ public interface EventLogMapper {
     @Mapping(target = "eventId", source = "id")
     @Mapping(target = "timestamp", source = "eventDate", qualifiedByName = "localDateToTimestamp")
     EventLogDto toDto(EventLog entity);
-
-    @Named("localDateToTimestamp")
-    static long localDateToTimestamp(LocalDate date) {
-        if (date == null) {
-            return 0L;
-        }
-        return date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
-    }
 }

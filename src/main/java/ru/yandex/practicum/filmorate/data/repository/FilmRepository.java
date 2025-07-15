@@ -54,21 +54,21 @@ public class FilmRepository extends BaseRepository<Film> {
     private static final String REMOVE_LIKE_SQL = "DELETE FROM FILM_LIKE WHERE FILM_ID = ? AND USER_ID = ?";
     private static final String GET_LIKES_SQL = "SELECT USER_ID FROM FILM_LIKE WHERE FILM_ID = ?";
     private static final String GET_POPULAR_FILMS_SQL = """
- SELECT
-               f.ID AS FILM_ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION,
-               f.MPA_ID, m.NAME AS MPA_NAME,
-               g.ID AS GENRE_ID, g.NAME AS GENRE_NAME,
-               fl.USER_ID,
-               COUNT(fl.USER_ID) OVER (PARTITION BY f.ID) AS LIKE_COUNT,
-               d.ID AS DIRECTOR_ID, d.NAME AS DIRECTOR_NAME
-           FROM FILM f
-           JOIN MPA_RATING m ON f.MPA_ID = m.ID
-           LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
-           LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
-           LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
-           LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
-           LEFT JOIN DIRECTOR d ON d.ID = fd.DIRECTOR_ID
- """;
+            SELECT
+                          f.ID AS FILM_ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION,
+                          f.MPA_ID, m.NAME AS MPA_NAME,
+                          g.ID AS GENRE_ID, g.NAME AS GENRE_NAME,
+                          fl.USER_ID,
+                          COUNT(fl.USER_ID) OVER (PARTITION BY f.ID) AS LIKE_COUNT,
+                          d.ID AS DIRECTOR_ID, d.NAME AS DIRECTOR_NAME
+                      FROM FILM f
+                      JOIN MPA_RATING m ON f.MPA_ID = m.ID
+                      LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
+                      LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
+                      LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
+                      LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
+                      LEFT JOIN DIRECTOR d ON d.ID = fd.DIRECTOR_ID
+            """;
 
     private static final String GET_FILMS_BY_DIRECTOR = """
             SELECT
@@ -102,6 +102,22 @@ public class FilmRepository extends BaseRepository<Film> {
             HAVING rate > 1
             ORDER BY rate DESC
             LIMIT ?
+            """;
+    private static final String SEARCH_FILMS_SQL = """
+            SELECT
+                f.ID AS FILM_ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION,
+                f.MPA_ID, m.NAME AS MPA_NAME,
+                g.ID AS GENRE_ID, g.NAME AS GENRE_NAME,
+                fl.USER_ID,
+                d.ID AS DIRECTOR_ID, d.NAME AS DIRECTOR_NAME,
+                (SELECT COUNT(*) FROM FILM_LIKE fl2 WHERE fl2.FILM_ID = f.ID) AS LIKE_COUNT
+            FROM FILM f
+            JOIN MPA_RATING m ON f.MPA_ID = m.ID
+            LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
+            LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
+            LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
+            LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
+            LEFT JOIN DIRECTOR d ON fd.DIRECTOR_ID = d.ID
             """;
     private static String GET_RECOMMENDATIONS_SQL = """
             SELECT fl.film_id
@@ -249,10 +265,10 @@ public class FilmRepository extends BaseRepository<Film> {
             }
         }
         String sql = GET_POPULAR_FILMS_SQL + newsql +
-           """
-           ORDER BY LIKE_COUNT DESC
-           LIMIT ?
-           """;
+                """
+                        ORDER BY LIKE_COUNT DESC
+                        LIMIT ?
+                        """;
         params.add(count);
         return jdbcTemplate.query(sql, this::mapFilmResultSet, params.toArray());
     }
@@ -349,4 +365,51 @@ public class FilmRepository extends BaseRepository<Film> {
         return jdbcTemplate.queryForList(GET_RECOMMENDATIONS_SQL, args, Long.class);
     }
 
+    public List<Film> searchFilms(String query, String[] searchBy) {
+        if (query == null || query.isBlank() || searchBy == null || searchBy.length == 0) {
+            return Collections.emptyList();
+        }
+
+        boolean searchByTitle = false;
+        boolean searchByDirector = false;
+
+        for (String param : searchBy) {
+            if ("title".equalsIgnoreCase(param.trim())) searchByTitle = true;
+            if ("director".equalsIgnoreCase(param.trim())) searchByDirector = true;
+        }
+
+        if (!searchByTitle && !searchByDirector) {
+            return Collections.emptyList();
+        }
+
+        String sql = buildSearchQuery(searchByTitle, searchByDirector);
+        String searchPattern = "%" + query.toLowerCase() + "%";
+
+        if (searchByTitle && searchByDirector) {
+            return executeFilmQuery(sql, searchPattern, searchPattern);
+        } else {
+            return executeFilmQuery(sql, searchPattern);
+        }
+    }
+
+    private String buildSearchQuery(boolean searchByTitle, boolean searchByDirector) {
+        StringBuilder sql = new StringBuilder(SEARCH_FILMS_SQL);
+
+        List<String> conditions = new ArrayList<>();
+        if (searchByTitle) {
+            conditions.add("LOWER(f.NAME) LIKE LOWER(?)");
+        }
+        if (searchByDirector) {
+            conditions.add("LOWER(d.NAME) LIKE LOWER(?)");
+        }
+
+        if (!conditions.isEmpty()) {
+            sql.append("WHERE ");
+            sql.append(String.join(" OR ", conditions));
+        }
+
+        sql.append(" ORDER BY LIKE_COUNT DESC");
+
+        return sql.toString();
+    }
 }
