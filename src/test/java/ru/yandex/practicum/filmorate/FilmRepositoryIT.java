@@ -51,7 +51,9 @@ class FilmRepositoryIT {
 
     private Film testFilm1;
     private Film testFilm2;
-    private User testUser;
+    private User testUser1;
+    private User testUser2;
+    private User testUser3;
     private MpaRating existingMpa1;
     private MpaRating existingMpa2;
     private Genre existingGenre;
@@ -70,11 +72,25 @@ class FilmRepositoryIT {
         existingMpa2 = mpaRatingRepository.findByIdOrThrow(2L); // PG
         existingGenre = genreRepository.findByIdOrThrow(1L); // Комедия
 
-        testUser = User.builder()
-                .name("Test User")
-                .login("testlogin")
-                .email("test@example.com")
+        testUser1 = User.builder()
+                .name("Test User1")
+                .login("testlogin1")
+                .email("test1@example.com")
                 .birthday(LocalDate.of(1990, 1, 1))
+                .build();
+
+        testUser2 = User.builder()
+                .name("Test User2")
+                .login("testlogin2")
+                .email("test2@example.com")
+                .birthday(LocalDate.of(1992, 1, 1))
+                .build();
+
+        testUser3 = User.builder()
+                .name("Test User3")
+                .login("testlogin3")
+                .email("test3@example.com")
+                .birthday(LocalDate.of(1993, 1, 1))
                 .build();
 
         testFilm1 = Film.builder()
@@ -134,7 +150,7 @@ class FilmRepositoryIT {
     @Test
     void shouldManageLikes() throws ConditionsException, NotFoundException {
         Film film = filmRepository.insert(testFilm1);
-        User user = userRepository.insert(testUser);
+        User user = userRepository.insert(testUser1);
 
         filmRepository.addLike(film.getId(), user.getId());
         assertThat(filmRepository.getFilmLikes(film.getId())).contains(user.getId());
@@ -215,7 +231,7 @@ class FilmRepositoryIT {
 
     @Test
     void shouldGetPopularFilms() throws ConditionsException, NotFoundException {
-        User createdUser = userRepository.insert(testUser);
+        User createdUser = userRepository.insert(testUser1);
         Film createdFilm1 = filmRepository.insert(testFilm1);
         filmRepository.insert(testFilm2);
 
@@ -230,7 +246,7 @@ class FilmRepositoryIT {
 
     @Test
     void shouldGetPopularFilmsByYears() throws ConditionsException, NotFoundException {
-        User createdUser = userRepository.insert(testUser);
+        User createdUser = userRepository.insert(testUser1);
         Film createdFilm1 = filmRepository.insert(testFilm1);
         filmRepository.insert(testFilm2);
 
@@ -246,7 +262,7 @@ class FilmRepositoryIT {
     @Test
     void shouldGetPopularFilmsByGenre() throws ConditionsException, NotFoundException {
         testFilm1.setGenres(Collections.singleton(existingGenre));
-        User createdUser = userRepository.insert(testUser);
+        User createdUser = userRepository.insert(testUser1);
         Film createdFilm1 = filmRepository.insert(testFilm1);
         filmRepository.insert(testFilm2);
 
@@ -262,7 +278,7 @@ class FilmRepositoryIT {
     @Test
     void shouldGetPopularFilmsByYearsAndGenre() throws ConditionsException, NotFoundException {
         testFilm1.setGenres(Collections.singleton(existingGenre));
-        User createdUser = userRepository.insert(testUser);
+        User createdUser = userRepository.insert(testUser1);
         Film createdFilm1 = filmRepository.insert(testFilm1);
         filmRepository.insert(testFilm2);
 
