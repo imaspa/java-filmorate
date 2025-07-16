@@ -129,6 +129,7 @@ public class FilmRepository extends BaseRepository<Film> {
                 WHERE ul.user_id = ?
                 )
             """;
+
     private final JdbcTemplate jdbcTemplate;
 
     public FilmRepository(JdbcTemplate jdbcTemplate) {

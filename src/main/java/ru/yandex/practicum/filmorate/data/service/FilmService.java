@@ -71,6 +71,13 @@ public class FilmService {
         return mapper.toDto(repository.findByIdOrThrow(filmId));
     }
 
+    public void remove(Long filmId) throws NotFoundException {
+        log.info("Удаление фильма (старт). Фильм: {}", filmId);
+        repository.findByIdOrThrow(filmId);
+        repository.deleteById(filmId);
+        log.info("Удаление фильма (стоп). Фильм: {}", filmId);
+    }
+
     public void addLike(Long filmId, Long userId) throws NotFoundException, ConditionsException {
         log.info("Добавить лайк фильму (старт). Пользователь: {}, фильм: {}", userId, filmId);
         repositoryUser.findByIdOrThrow(userId);
@@ -147,4 +154,5 @@ public class FilmService {
                 .map(mapper::toDto)
                 .collect(Collectors.toList());
     }
+
 }

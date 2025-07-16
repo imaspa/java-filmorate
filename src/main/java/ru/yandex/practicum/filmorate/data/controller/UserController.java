@@ -40,6 +40,11 @@ public class UserController {
         return userService.update(userDto.getId(), userDto);
     }
 
+    @DeleteMapping("/{userId}")
+    public void deleteUser(@PathVariable Long userId) throws NotFoundException {
+        userService.remove(userId);
+    }
+
     @GetMapping
     public Iterable<UserDto> getUser() {
         return userService.getAll();
@@ -79,6 +84,4 @@ public class UserController {
     public List<EventLogDto> getFeedByUserId(@PathVariable Long userId, @RequestParam(defaultValue = "100") Long limit) throws NotFoundException {
         return userService.getFeedByUserId(userId, limit);
     }
-
-
 }
