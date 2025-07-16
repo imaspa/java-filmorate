@@ -175,21 +175,21 @@ class FilmRepositoryIT {
                 104L, "Film 5", "Description 5", "2004-01-01", 130, 3);
 
         // Создаем лайки
-        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 100L ,1L);
-        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 101L ,1L);
-        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 102L ,1L);
+        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 100L, 1L);
+        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 101L, 1L);
+        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 102L, 1L);
 
-        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 103L ,2L);
-        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 104L ,2L);
+        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 103L, 2L);
+        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 104L, 2L);
 
-        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 101L ,3L);
-        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 102L ,3L);
+        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 101L, 3L);
+        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 102L, 3L);
 
         // Предполагаемый список похожих пользователей
         List<Long> sameUserIds = Arrays.asList(2L, 3L);
 
         // Получение рекомендаций для пользователя с id=1
-        List<Long> recommendations = filmRepository.getFilmRecommendations(1L ,sameUserIds);
+        List<Long> recommendations = filmRepository.getFilmRecommendations(1L, sameUserIds);
 
         // Проверка: рекомендации не должны включать уже просмотренные фильмы пользователем с ID=1
         assertThat(recommendations).isNotNull();
