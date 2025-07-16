@@ -276,7 +276,7 @@ class FilmRepositoryIT {
     }
 
     @Test
-    void shouldGetCommonFilms() throws ConditionsException, NotFoundException {
+    void shouldGetCommonFilms() throws ConditionsException {
         User user = User.builder()
                 .name("Test User 2")
                 .login("test2login")
@@ -340,7 +340,7 @@ class FilmRepositoryIT {
     }
 
     @Test
-    void shouldGetEmptyCommonFilms() throws ConditionsException, NotFoundException {
+    void shouldGetEmptyCommonFilms() throws ConditionsException {
         User user = User.builder()
                 .name("Test User 2")
                 .login("test2login")
