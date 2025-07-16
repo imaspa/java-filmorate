@@ -175,4 +175,23 @@ public class FilmService {
                 .collect(Collectors.toList());
     }
 
+    public List<FilmDto> getCommonFilms(Long userId, Long friendId) throws NotFoundException, ConditionsException {
+        log.info("Общие фильмы пользователей (старт). пользователь 1: {} пользователь 2: {}", userId, friendId);
+        repositoryUser.findByIdOrThrow(userId);
+        repositoryUser.findByIdOrThrow(friendId);
+
+        if (Objects.equals(userId, friendId)) {
+            throw new ConditionsException("Нельзя искать общие фильмы у одного пользователя");
+        }
+
+        log.info("Общие фильмы пользователей (стоп). пользователь 1: {} пользователь 2: {}", userId, friendId);
+
+        List<Film> films =  repository.getCommonFilms(userId, friendId);
+
+        return films.stream()
+                .distinct()
+                .map(mapper::toDto)
+                .collect(Collectors.toList());
+    }
+
 }
