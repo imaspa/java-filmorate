@@ -53,6 +53,13 @@ public class UserService {
         return mapper.toDto(user);
     }
 
+    public void remove(Long userId) throws NotFoundException {
+        log.info("Удаление пользователя (старт). Пользователь: {}", userId);
+        repository.findByIdOrThrow(userId);
+        repository.deleteById(userId);
+        log.info("Удаление пользователя (стоп). Пользователь: {}", userId);
+    }
+
     public List<UserDto> getAll() {
         log.info("Получение списка всех пользователей (старт)");
         var result = repository.findAll()
