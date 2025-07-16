@@ -80,4 +80,9 @@ public class FilmController {
         return filmService.findByDirector(directorId, sortBy);
     }
 
+    @GetMapping("/common")
+    public List<FilmDto> getCommonFilms(@RequestParam Long userId, @RequestParam Long friendId) throws ConditionsException, NotFoundException {
+        return filmService.getCommonFilms(userId, friendId);
+    }
+
 }
