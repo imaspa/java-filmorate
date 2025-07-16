@@ -73,7 +73,7 @@ class FilmRepositoryIT {
         testUser = User.builder()
                 .name("Test User")
                 .login("testlogin")
-                .email("test1@example.com")
+                .email("test@example.com")
                 .birthday(LocalDate.of(1990, 1, 1))
                 .build();
 
