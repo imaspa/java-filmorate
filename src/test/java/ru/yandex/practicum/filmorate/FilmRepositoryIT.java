@@ -221,7 +221,7 @@ class FilmRepositoryIT {
 
         filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
 
-        List<Film> popularFilms = filmRepository.getPopularFilms(1L,null,null);
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L, null, null);
         assertThat(popularFilms)
                 .hasSize(1)
                 .extracting(Film::getId)
@@ -236,7 +236,7 @@ class FilmRepositoryIT {
 
         filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
 
-        List<Film> popularFilms = filmRepository.getPopularFilms(1L,2020,null);
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L, 2020, null);
         assertThat(popularFilms)
                 .hasSize(1)
                 .extracting(Film::getId)
@@ -252,7 +252,7 @@ class FilmRepositoryIT {
 
         filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
 
-        List<Film> popularFilms = filmRepository.getPopularFilms(1L,null,1L);
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L, null, 1L);
         assertThat(popularFilms)
                 .hasSize(1)
                 .extracting(Film::getId)
@@ -268,7 +268,7 @@ class FilmRepositoryIT {
 
         filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
 
-        List<Film> popularFilms = filmRepository.getPopularFilms(1L,2020,1L);
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L, 2020, 1L);
         assertThat(popularFilms)
                 .hasSize(1)
                 .extracting(Film::getId)
