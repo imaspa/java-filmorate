@@ -38,6 +38,11 @@ public class FilmController {
         return filmService.update(filmDto.getId(), filmDto);
     }
 
+    @DeleteMapping("/{filmId}")
+    public void deleteFilm(@PathVariable Long filmId) throws NotFoundException {
+        filmService.remove(filmId);
+    }
+
     @GetMapping
     public List<FilmDto> getFilms() {
         return filmService.getAll();
@@ -74,4 +79,5 @@ public class FilmController {
     public List<FilmDto> findByDirector(@PathVariable Long directorId, @RequestParam String sortBy) throws NotFoundException {
         return filmService.findByDirector(directorId, sortBy);
     }
+
 }
