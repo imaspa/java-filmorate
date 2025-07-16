@@ -298,48 +298,6 @@ class FilmRepositoryIT {
     }
 
     @Test
-    void shouldGetCommonFilms() throws ConditionsException, NotFoundException {
-        User user = User.builder()
-                .name("Test User 2")
-                .login("test2login")
-                .email("test2@example.com")
-                .birthday(LocalDate.of(1992, 2, 3))
-                .build();
-        Film createdFilm1 = filmRepository.insert(testFilm1);
-        User createdUser1 = userRepository.insert(testUser);
-        User createdUser2 = userRepository.insert(user);
-
-        filmRepository.addLike(createdFilm1.getId(), createdUser1.getId());
-        filmRepository.addLike(createdFilm1.getId(), createdUser2.getId());
-
-        List<Film> commonFilms = filmRepository.getCommonFilms(createdUser1.getId(), createdUser2.getId());
-        assertThat(commonFilms)
-                .hasSize(1)
-                .extracting(Film::getId)
-                .containsExactly(createdFilm1.getId());
-    }
-
-    @Test
-    void shouldGetEmptyCommonFilms() throws ConditionsException, NotFoundException {
-        User user = User.builder()
-                .name("Test User 2")
-                .login("test2login")
-                .email("test2@example.com")
-                .birthday(LocalDate.of(1992, 2, 3))
-                .build();
-        Film createdFilm1 = filmRepository.insert(testFilm1);
-        Film createdFilm2 = filmRepository.insert(testFilm2);
-        User createdUser1 = userRepository.insert(testUser);
-        User createdUser2 = userRepository.insert(user);
-
-        filmRepository.addLike(createdFilm1.getId(), createdUser1.getId());
-        filmRepository.addLike(createdFilm2.getId(), createdUser2.getId());
-
-        List<Film> commonFilms = filmRepository.getCommonFilms(createdUser1.getId(), createdUser2.getId());
-        assertThat(commonFilms).isEmpty();
-    }
-
-    @Test
     void shouldGetEmptyCommonFilms() throws ConditionsException {
         User user = User.builder()
                 .name("Test User 2")

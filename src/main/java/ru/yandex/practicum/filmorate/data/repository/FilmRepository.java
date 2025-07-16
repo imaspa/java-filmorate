@@ -131,35 +131,35 @@ public class FilmRepository extends BaseRepository<Film> {
             """;
 
     private static String GET_COMMON_FILMS = """
-        SELECT
-            f.ID                         AS FILM_ID,
-            f.NAME                       AS FILM_NAME,
-            f.DESCRIPTION                AS DESCRIPTION,
-            f.RELEASE_DATE               AS RELEASE_DATE,
-            f.DURATION                   AS DURATION,
-            f.MPA_ID                     AS MPA_ID,
-            m.NAME                       AS MPA_NAME,
-            g.ID                         AS GENRE_ID,
-            g.NAME                       AS GENRE_NAME,
-            d.ID                         AS DIRECTOR_ID,
-            d.NAME                       AS DIRECTOR_NAME,
-            fl.USER_ID                   AS LIKE_USER_ID,
-            -- Подсчёт общего количества лайков по фильму (рейтинг)
-            (SELECT COUNT(*) FROM FILM_LIKE fl2 WHERE fl2.FILM_ID = f.ID) AS LIKE_COUNT
-        FROM FILM f
-        -- Ограничиваем фильмы, которые полайкали оба пользователя
-        JOIN FILM_LIKE fl1 ON f.ID = fl1.FILM_ID
-        JOIN FILM_LIKE fl2 ON f.ID = fl2.FILM_ID AND fl1.USER_ID <> fl2.USER_ID
-        -- Присоединяем другие атрибуты
-        LEFT JOIN MPA_RATING m ON f.MPA_ID = m.ID
-        LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
-        LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
-        LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
-        LEFT JOIN DIRECTOR d ON fd.DIRECTOR_ID = d.ID
-        LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID -- нужен для LIKE_USER_ID
-        WHERE fl1.USER_ID = ? AND fl2.USER_ID = ?
-        ORDER BY f.ID, g.ID, d.ID;
-        """;
+            SELECT
+                f.ID                         AS FILM_ID,
+                f.NAME                       AS FILM_NAME,
+                f.DESCRIPTION                AS DESCRIPTION,
+                f.RELEASE_DATE               AS RELEASE_DATE,
+                f.DURATION                   AS DURATION,
+                f.MPA_ID                     AS MPA_ID,
+                m.NAME                       AS MPA_NAME,
+                g.ID                         AS GENRE_ID,
+                g.NAME                       AS GENRE_NAME,
+                d.ID                         AS DIRECTOR_ID,
+                d.NAME                       AS DIRECTOR_NAME,
+                fl.USER_ID                   AS LIKE_USER_ID,
+                -- Подсчёт общего количества лайков по фильму (рейтинг)
+                (SELECT COUNT(*) FROM FILM_LIKE fl2 WHERE fl2.FILM_ID = f.ID) AS LIKE_COUNT
+            FROM FILM f
+            -- Ограничиваем фильмы, которые полайкали оба пользователя
+            JOIN FILM_LIKE fl1 ON f.ID = fl1.FILM_ID
+            JOIN FILM_LIKE fl2 ON f.ID = fl2.FILM_ID AND fl1.USER_ID <> fl2.USER_ID
+            -- Присоединяем другие атрибуты
+            LEFT JOIN MPA_RATING m ON f.MPA_ID = m.ID
+            LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
+            LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
+            LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
+            LEFT JOIN DIRECTOR d ON fd.DIRECTOR_ID = d.ID
+            LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID -- нужен для LIKE_USER_ID
+            WHERE fl1.USER_ID = ? AND fl2.USER_ID = ?
+            ORDER BY f.ID, g.ID, d.ID;
+            """;
 
     private final JdbcTemplate jdbcTemplate;
 
