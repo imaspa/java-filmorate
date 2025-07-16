@@ -214,14 +214,14 @@ class FilmRepositoryIT {
     }
 
     @Test
-    void shouldGetPopularFilms() throws ConditionsException, NotFoundException {
+    void shouldGetPopularFilms() throws ConditionsException {
         User createdUser = userRepository.insert(testUser);
         Film createdFilm1 = filmRepository.insert(testFilm1);
         filmRepository.insert(testFilm2);
 
         filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
 
-        List<Film> popularFilms = filmRepository.getPopularFilms(1L, null, null);
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L,null,null);
         assertThat(popularFilms)
                 .hasSize(1)
                 .extracting(Film::getId)
@@ -229,14 +229,14 @@ class FilmRepositoryIT {
     }
 
     @Test
-    void shouldGetPopularFilmsByYears() throws ConditionsException, NotFoundException {
+    void shouldGetPopularFilmsByYears() throws ConditionsException {
         User createdUser = userRepository.insert(testUser);
         Film createdFilm1 = filmRepository.insert(testFilm1);
         filmRepository.insert(testFilm2);
 
         filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
 
-        List<Film> popularFilms = filmRepository.getPopularFilms(1L, 2020, null);
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L,2020,null);
         assertThat(popularFilms)
                 .hasSize(1)
                 .extracting(Film::getId)
@@ -244,7 +244,7 @@ class FilmRepositoryIT {
     }
 
     @Test
-    void shouldGetPopularFilmsByGenre() throws ConditionsException, NotFoundException {
+    void shouldGetPopularFilmsByGenre() throws ConditionsException {
         testFilm1.setGenres(Collections.singleton(existingGenre));
         User createdUser = userRepository.insert(testUser);
         Film createdFilm1 = filmRepository.insert(testFilm1);
@@ -252,7 +252,7 @@ class FilmRepositoryIT {
 
         filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
 
-        List<Film> popularFilms = filmRepository.getPopularFilms(1L, null,1L);
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L,null,1L);
         assertThat(popularFilms)
                 .hasSize(1)
                 .extracting(Film::getId)
@@ -260,7 +260,7 @@ class FilmRepositoryIT {
     }
 
     @Test
-    void shouldGetPopularFilmsByYearsAndGenre() throws ConditionsException, NotFoundException {
+    void shouldGetPopularFilmsByYearsAndGenre() throws ConditionsException {
         testFilm1.setGenres(Collections.singleton(existingGenre));
         User createdUser = userRepository.insert(testUser);
         Film createdFilm1 = filmRepository.insert(testFilm1);
@@ -268,7 +268,7 @@ class FilmRepositoryIT {
 
         filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
 
-        List<Film> popularFilms = filmRepository.getPopularFilms(1L, 2020, 1L);
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L,2020,1L);
         assertThat(popularFilms)
                 .hasSize(1)
                 .extracting(Film::getId)
