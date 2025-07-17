@@ -18,8 +18,8 @@ public class ReviewRepository extends BaseRepository<Review> {
     private static final String UPDATE_SQL = "UPDATE REVIEW SET user_id = ?,film_id = ?,content = ?,is_positive = ? WHERE id=?";
     private static final String FIND_BY_ID_SQL = "SELECT * FROM REVIEW WHERE id = ?";
     private static final String DELETE_REVIEW_BY_ID = "DELETE FROM REVIEW WHERE id = ?";
-    private static final String FIND_ALL = "SELECT * FROM REVIEW LIMIT ?";
-    private static final String FIND_ALL_BY_FILM = "SELECT * FROM REVIEW WHERE film_id = ? LIMIT ?";
+    private static final String FIND_ALL = "SELECT * FROM REVIEW ORDER BY USEFUL DESC LIMIT ?";
+    private static final String FIND_ALL_BY_FILM = "SELECT * FROM REVIEW WHERE film_id = ? ORDER BY USEFUL DESC LIMIT ?";
     private static final String REVIEW_USEFUL_UP = "UPDATE REVIEW SET useful = useful + ? WHERE id = ?";
     private static final String REVIEW_USEFUL_DOWN = "UPDATE REVIEW SET useful = useful - ? WHERE id = ?";
     private static final String LIKE = "MERGE INTO REVIEW_LIKE(review_id, user_id, is_dislike) VALUES (?,?,?)";

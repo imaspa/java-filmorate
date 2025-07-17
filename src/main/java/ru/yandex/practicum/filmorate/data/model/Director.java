@@ -10,6 +10,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder(toBuilder = true)
 public class Director implements Identifiable {
+
     private Long id;
+
     private String name;
 }

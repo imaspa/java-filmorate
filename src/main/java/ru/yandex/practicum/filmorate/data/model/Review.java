@@ -10,10 +10,16 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Review implements Identifiable {
+
     private Long id;
+
     private Long userId;
+
     private Long filmId;
+
     private String content;
+
     private Boolean isPositive = true;
+
     private Integer useful = 0;
 }

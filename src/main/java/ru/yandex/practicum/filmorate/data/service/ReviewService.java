@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.data.service;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,7 +30,7 @@ public class ReviewService {
     private final UserRepository repositoryUser;
     private final EventLogService eventLogService;
 
-    public ReviewDto add(ReviewDto reviewDto) throws ConditionsException, NotFoundException {
+    public ReviewDto add(@Valid ReviewDto reviewDto) throws ConditionsException, NotFoundException {
         log.info("Создание отзыва (старт) review: {}", reviewDto);
         Review review = mapper.toEntity(reviewDto);
         validate(review);
@@ -39,12 +40,12 @@ public class ReviewService {
         return mapper.toDto(review);
     }
 
-    public ReviewDto update(ReviewDto reviewDto) throws ConditionsException, NotFoundException {
+    public ReviewDto update(@Valid ReviewDto reviewDto) throws ConditionsException, NotFoundException {
         log.info("Редактирование отзыва (старт) review: {}", reviewDto);
-        Review review = mapper.map(repository.findByIdOrThrow(reviewDto.getReviewId()), reviewDto);
+        Review review = mapper.mapUpdate(repository.findByIdOrThrow(reviewDto.getReviewId()), reviewDto);
         validate(review);
         repository.update(review);
-        eventLogService.add(reviewDto.getUserId(), reviewDto.getReviewId(), EventType.REVIEW, Operation.UPDATE);
+        eventLogService.add(review.getUserId(), review.getId(), EventType.REVIEW, Operation.UPDATE);
         log.info("Редактирование отзыва (стоп) review: {}", review);
         return mapper.toDto(review);
     }
@@ -75,7 +76,6 @@ public class ReviewService {
     public void validate(Review review) throws NotFoundException, ConditionsException {
         Long userId = review.getUserId();
         Long filmId = review.getFilmId();
-        // to-do зарефакторить!
         if (userId == null) {
             throw new ConditionsException("Юзер должен быть указан");
         }
@@ -112,7 +112,7 @@ public class ReviewService {
             log.info("Не найдена реакция на отзыв {} юзера {}", reviewId, userId);
             return;
         }
-        //eventLogService.add(userId, reviewId, EventType.LIKE, Operation.REMOVE);
+
         repository.deleteLike(reviewId, userId, optIsDislike.get());
         log.info("Удаление реакции на отзыв (стоп) id = {}, юзер = {}", reviewId, userId);
     }

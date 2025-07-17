@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.data.service;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,7 +24,7 @@ public class DirectorService {
     private final FilmRepository filmRepository;
     private final DirectorMapper mapper;
 
-    public DirectorDto add(DirectorDto directorDto) throws ConditionsException {
+    public DirectorDto add(@Valid DirectorDto directorDto) throws ConditionsException {
         log.info("Создание режиссера (старт) имя = {}", directorDto.getName());
         Director director = mapper.toEntity(directorDto);
         director = repository.insert(director);
@@ -42,7 +43,7 @@ public class DirectorService {
         return mapper.toDto(director);
     }
 
-    public DirectorDto update(DirectorDto directorDto) throws NotFoundException, ConditionsException {
+    public DirectorDto update(@Valid DirectorDto directorDto) throws NotFoundException, ConditionsException {
         log.info("Изменение режиссера (старт) id = {}, name = {}", directorDto.getId(), directorDto.getName());
         Director director = mapper.map(repository.getDirectorById(directorDto.getId()), directorDto);
         log.info("Изменение режиссера (стоп) id = {}, name = {}", directorDto.getId(), directorDto.getName());

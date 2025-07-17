@@ -150,6 +150,7 @@ public class UserService {
 
     public List<EventLogDto> getFeedByUserId(Long userId, Long limit) throws NotFoundException {
         log.info("Лента событий (старт) userId: {}", userId);
+        repository.findByIdOrThrow(userId);
         var feed = eventLogRepository.getFeedByUserId(userId, limit)
                 .stream()
                 .map(eventLogMapper::toDto)

@@ -10,7 +10,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ReviewLike {
+
     private Long userId;
+
     private Long reviewId;
+
     private Boolean isDislike = false;
 }

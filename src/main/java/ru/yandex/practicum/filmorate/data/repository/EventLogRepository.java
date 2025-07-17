@@ -25,13 +25,18 @@ public class EventLogRepository extends BaseRepository<EventLog> {
                 EVENT_LOG el
             WHERE
                 el.USER_ID = ? -- События самого пользователя
-                OR el.USER_ID IN ( --  события его друзей
-                    SELECT
-                        f.FRIEND_ID
-                    FROM
-                        FRIENDSHIP f
-                    WHERE
-                        f.USER_ID = ?
+                OR (
+                    el.USER_ID IN ( -- события друзей
+                        SELECT
+                            f.FRIEND_ID
+                        FROM
+                            FRIENDSHIP f
+                        WHERE
+                            f.USER_ID = ?
+                    )
+                    AND (
+                        el.EVENT_TYPE = 'REVIEW' -- только отзывы друзей
+                    )
                 )
             ORDER BY
                 el.EVENT_DATE

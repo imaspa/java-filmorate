@@ -15,7 +15,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -42,34 +44,29 @@ public class FilmRepository extends BaseRepository<Film> {
             ORDER BY f.ID
             """;
     private static final String DELETE_SQL = "DELETE FROM FILM WHERE ID = ?";
-
-    // Жанры
     private static final String INSERT_GENRE_SQL = "INSERT INTO FILM_GENRE (FILM_ID, GENRE_ID) VALUES (?, ?)";
     private static final String DELETE_GENRES_SQL = "DELETE FROM FILM_GENRE WHERE FILM_ID = ?";
     private static final String GET_GENRES_SQL = "SELECT g.* FROM GENRE g JOIN FILM_GENRE fg ON g.ID = fg.GENRE_ID WHERE fg.FILM_ID = ?";
-
-    // Лайки
     private static final String CHECK_LIKE_EXISTS_SQL = "SELECT COUNT(*) > 0 FROM FILM_LIKE WHERE FILM_ID = ? AND USER_ID = ?";
     private static final String ADD_LIKE_SQL = "INSERT INTO FILM_LIKE (FILM_ID, USER_ID) VALUES (?, ?)";
     private static final String REMOVE_LIKE_SQL = "DELETE FROM FILM_LIKE WHERE FILM_ID = ? AND USER_ID = ?";
     private static final String GET_LIKES_SQL = "SELECT USER_ID FROM FILM_LIKE WHERE FILM_ID = ?";
     private static final String GET_POPULAR_FILMS_SQL = """
             SELECT
-                          f.ID AS FILM_ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION,
-                          f.MPA_ID, m.NAME AS MPA_NAME,
-                          g.ID AS GENRE_ID, g.NAME AS GENRE_NAME,
-                          fl.USER_ID,
-                          COUNT(fl.USER_ID) OVER (PARTITION BY f.ID) AS LIKE_COUNT,
-                          d.ID AS DIRECTOR_ID, d.NAME AS DIRECTOR_NAME
-                      FROM FILM f
-                      JOIN MPA_RATING m ON f.MPA_ID = m.ID
-                      LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
-                      LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
-                      LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
-                      LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
-                      LEFT JOIN DIRECTOR d ON d.ID = fd.DIRECTOR_ID
+                f.ID AS FILM_ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION,
+                f.MPA_ID, m.NAME AS MPA_NAME,
+                g.ID AS GENRE_ID, g.NAME AS GENRE_NAME,
+                fl.USER_ID,
+                COUNT(fl.USER_ID) OVER (PARTITION BY f.ID) AS LIKE_COUNT,
+                d.ID AS DIRECTOR_ID, d.NAME AS DIRECTOR_NAME
+            FROM FILM f
+            JOIN MPA_RATING m ON f.MPA_ID = m.ID
+            LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
+            LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
+            LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
+            LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
+            LEFT JOIN DIRECTOR d ON d.ID = fd.DIRECTOR_ID
             """;
-
     private static final String GET_FILMS_BY_DIRECTOR = """
             SELECT
                 f.ID AS FILM_ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION,
@@ -80,12 +77,12 @@ public class FilmRepository extends BaseRepository<Film> {
                 EXTRACT(YEAR FROM f.RELEASE_DATE) AS YEARS,
                 d.ID AS DIRECTOR_ID, d.NAME AS DIRECTOR_NAME
             FROM FILM AS f
-                     JOIN MPA_RATING m ON f.MPA_ID = m.ID
-                     LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
-                     LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
-                     LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
-                     LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
-                     LEFT JOIN DIRECTOR d ON d.ID = fd.DIRECTOR_ID
+            JOIN MPA_RATING m ON f.MPA_ID = m.ID
+            LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
+            LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
+            LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
+            LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
+            LEFT JOIN DIRECTOR d ON d.ID = fd.DIRECTOR_ID
             WHERE fd.DIRECTOR_ID = ?
             %s
             """;
@@ -129,34 +126,30 @@ public class FilmRepository extends BaseRepository<Film> {
                 WHERE ul.user_id = ?
                 )
             """;
-
     private static String GET_COMMON_FILMS = """
             SELECT
-                f.ID                         AS FILM_ID,
-                f.NAME                       AS FILM_NAME,
-                f.DESCRIPTION                AS DESCRIPTION,
-                f.RELEASE_DATE               AS RELEASE_DATE,
-                f.DURATION                   AS DURATION,
-                f.MPA_ID                     AS MPA_ID,
-                m.NAME                       AS MPA_NAME,
-                g.ID                         AS GENRE_ID,
-                g.NAME                       AS GENRE_NAME,
-                d.ID                         AS DIRECTOR_ID,
-                d.NAME                       AS DIRECTOR_NAME,
-                fl.USER_ID                   AS LIKE_USER_ID,
-                -- Подсчёт общего количества лайков по фильму (рейтинг)
+                f.ID AS FILM_ID,
+                f.NAME AS FILM_NAME,
+                f.DESCRIPTION AS DESCRIPTION,
+                f.RELEASE_DATE AS RELEASE_DATE,
+                f.DURATION AS DURATION,
+                f.MPA_ID AS MPA_ID,
+                m.NAME AS MPA_NAME,
+                g.ID AS GENRE_ID,
+                g.NAME AS GENRE_NAME,
+                d.ID AS DIRECTOR_ID,
+                d.NAME AS DIRECTOR_NAME,
+                fl.USER_ID AS LIKE_USER_ID,
                 (SELECT COUNT(*) FROM FILM_LIKE fl2 WHERE fl2.FILM_ID = f.ID) AS LIKE_COUNT
             FROM FILM f
-            -- Ограничиваем фильмы, которые полайкали оба пользователя
             JOIN FILM_LIKE fl1 ON f.ID = fl1.FILM_ID
             JOIN FILM_LIKE fl2 ON f.ID = fl2.FILM_ID AND fl1.USER_ID <> fl2.USER_ID
-            -- Присоединяем другие атрибуты
             LEFT JOIN MPA_RATING m ON f.MPA_ID = m.ID
             LEFT JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID
             LEFT JOIN GENRE g ON fg.GENRE_ID = g.ID
             LEFT JOIN FILM_DIRECTOR fd ON f.ID = fd.FILM_ID
             LEFT JOIN DIRECTOR d ON fd.DIRECTOR_ID = d.ID
-            LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID -- нужен для LIKE_USER_ID
+            LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
             WHERE fl1.USER_ID = ? AND fl2.USER_ID = ?
             ORDER BY f.ID, g.ID, d.ID;
             """;
@@ -257,7 +250,8 @@ public class FilmRepository extends BaseRepository<Film> {
 
     public void addLike(Long filmId, Long userId) throws ConditionsException {
         if (isLikeExists(filmId, userId)) {
-            throw new ConditionsException("Лайк уже учтен");
+            return;
+            //throw new ConditionsException("Лайк уже учтен");
         }
         jdbcTemplate.update(ADD_LIKE_SQL, filmId, userId);
     }
@@ -280,29 +274,43 @@ public class FilmRepository extends BaseRepository<Film> {
     }
 
     public List<Film> getPopularFilms(Long count, Integer year, Long genreId) {
-        String newsql = "";
+
+        String sql = """
+                WITH popular_films AS (
+                    SELECT f.ID
+                    FROM FILM f
+                    LEFT JOIN FILM_LIKE fl ON f.ID = fl.FILM_ID
+                """ + (genreId != null ? " JOIN FILM_GENRE fg ON f.ID = fg.FILM_ID" : "") + """
+                """ + (year != null || genreId != null ? " WHERE " : "") +
+                (year != null ? "YEAR(f.RELEASE_DATE) = ?" : "") +
+                (year != null && genreId != null ? " AND " : "") +
+                (genreId != null ? "fg.GENRE_ID = ?" : "") + """
+                    GROUP BY f.ID
+                    ORDER BY COUNT(fl.USER_ID) DESC
+                    LIMIT ?
+                )
+                """ + GET_POPULAR_FILMS_SQL + """
+                WHERE f.ID IN (SELECT ID FROM popular_films)
+                """ + (year != null ? " AND YEAR(f.RELEASE_DATE) = ?" : "") +
+                (genreId != null ? " AND EXISTS (SELECT 1 FROM FILM_GENRE fg WHERE fg.FILM_ID = f.ID AND fg.GENRE_ID = ?)" : "");
+
         List<Object> params = new ArrayList<>();
-        if (year != null || genreId != null) {
-            newsql += " WHERE ";
-            if (year != null) {
-                newsql += "YEAR(f.RELEASE_DATE) = ? ";
-                params.add(year);
-                if (genreId != null) {
-                    newsql += "AND ";
-                }
-            }
-            if (genreId != null) {
-                newsql += "fg.GENRE_ID = ? ";
-                params.add(genreId);
-            }
+
+        if (year != null) {
+            params.add(year);
         }
-        String sql = GET_POPULAR_FILMS_SQL + newsql +
-                """
-                        ORDER BY LIKE_COUNT DESC
-                        LIMIT ?
-                        """;
+        if (genreId != null) {
+            params.add(genreId);
+        }
         params.add(count);
-        return jdbcTemplate.query(sql, this::mapFilmResultSet, params.toArray());
+        if (year != null) {
+            params.add(year);
+        }
+        if (genreId != null) {
+            params.add(genreId);
+        }
+
+        return executeFilmQuery(sql, params.toArray());
     }
 
     public List<Film> findAll() {
@@ -310,40 +318,44 @@ public class FilmRepository extends BaseRepository<Film> {
     }
 
     private List<Film> executeFilmQuery(String sql, Object... args) {
-        return jdbcTemplate.query(sql, this::mapFilmResultSet, args);
-    }
+        return jdbcTemplate.query(sql, rs -> {
+            Map<Long, Film> films = new LinkedHashMap<>();
+            while (rs.next()) {
+                Long filmId = rs.getLong("FILM_ID");
+                Film film = films.get(filmId);
 
-    private Film mapFilmResultSet(ResultSet rs, int rowNum) throws SQLException {
-        Long filmId = rs.getLong("FILM_ID");
+                if (film == null) {
+                    film = Film.builder()
+                            .id(filmId)
+                            .name(rs.getString("NAME"))
+                            .description(rs.getString("DESCRIPTION"))
+                            .releaseDate(rs.getDate("RELEASE_DATE").toLocalDate())
+                            .duration(rs.getInt("DURATION"))
+                            .mpa(new MpaRating(rs.getLong("MPA_ID"), rs.getString("MPA_NAME")))
+                            .genres(new HashSet<>())
+                            .likes(new HashSet<>())
+                            .directors(new HashSet<>())
+                            .build();
+                    films.put(filmId, film);
+                }
 
-        Film film = Film.builder()
-                .id(filmId)
-                .name(rs.getString("NAME"))
-                .description(rs.getString("DESCRIPTION"))
-                .releaseDate(rs.getDate("RELEASE_DATE").toLocalDate())
-                .duration(rs.getInt("DURATION"))
-                .mpa(new MpaRating(rs.getLong("MPA_ID"), rs.getString("MPA_NAME")))
-                .genres(new HashSet<>())
-                .likes(new HashSet<>())
-                .directors(new HashSet<>())
-                .build();
-        Long genreId = rs.getLong("GENRE_ID");
-        if (!rs.wasNull()) {
-            film.getGenres().add(new Genre(
-                    genreId,
-                    rs.getString("GENRE_NAME")));
-        }
-        Long userId = rs.getLong("USER_ID");
-        if (!rs.wasNull()) {
-            film.getLikes().add(userId);
-        }
-        Long directorId = rs.getLong("DIRECTOR_ID");
-        if (!rs.wasNull()) {
-            film.getDirectors().add(new Director(
-                    directorId,
-                    rs.getString("DIRECTOR_NAME")));
-        }
-        return film;
+                Long genreId = rs.getLong("GENRE_ID");
+                if (!rs.wasNull()) {
+                    film.getGenres().add(new Genre(genreId, rs.getString("GENRE_NAME")));
+                }
+
+                Long userId = rs.getLong("USER_ID");
+                if (!rs.wasNull()) {
+                    film.getLikes().add(userId);
+                }
+
+                Long directorId = rs.getLong("DIRECTOR_ID");
+                if (!rs.wasNull()) {
+                    film.getDirectors().add(new Director(directorId, rs.getString("DIRECTOR_NAME")));
+                }
+            }
+            return new ArrayList<>(films.values());
+        }, args);
     }
 
     private Film mapToFilm(ResultSet rs) throws SQLException {

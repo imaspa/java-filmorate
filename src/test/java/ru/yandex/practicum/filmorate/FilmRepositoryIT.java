@@ -58,14 +58,12 @@ class FilmRepositoryIT {
 
     @BeforeEach
     void setUp() throws NotFoundException {
-        // Очистка базы в правильном порядке (с учетом foreign key constraints)
         jdbcTemplate.update("DELETE FROM FILM_LIKE");
         jdbcTemplate.update("DELETE FROM FILM_GENRE");
         jdbcTemplate.update("DELETE FROM FRIENDSHIP");
         jdbcTemplate.update("DELETE FROM FILM");
         jdbcTemplate.update("DELETE FROM USERS");
 
-        // Инициализация тестовых данных
         existingMpa1 = mpaRatingRepository.findByIdOrThrow(1L); // G
         existingMpa2 = mpaRatingRepository.findByIdOrThrow(2L); // PG
         existingGenre = genreRepository.findByIdOrThrow(1L); // Комедия
@@ -162,7 +160,6 @@ class FilmRepositoryIT {
         jdbcTemplate.update("INSERT INTO USERS (ID, NAME, LOGIN, EMAIL, BIRTHDAY) VALUES (?, ?, ?, ?, ?)",
                 3L, "User3", "user3", "user3@test.com", "1990-03-03");
 
-        // Создаем фильмы
         jdbcTemplate.update("INSERT INTO FILM (ID, NAME, DESCRIPTION, RELEASE_DATE, DURATION, MPA_ID) VALUES (?, ?, ?, ?, ?, ?)",
                 100L, "Film 1", "Description 1", "2000-01-01", 120, 1);
         jdbcTemplate.update("INSERT INTO FILM (ID, NAME, DESCRIPTION, RELEASE_DATE, DURATION, MPA_ID) VALUES (?, ?, ?, ?, ?, ?)",
@@ -174,7 +171,6 @@ class FilmRepositoryIT {
         jdbcTemplate.update("INSERT INTO FILM (ID, NAME, DESCRIPTION, RELEASE_DATE, DURATION, MPA_ID) VALUES (?, ?, ?, ?, ?, ?)",
                 104L, "Film 5", "Description 5", "2004-01-01", 130, 3);
 
-        // Создаем лайки
         jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 100L, 1L);
         jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 101L, 1L);
         jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 102L, 1L);
@@ -185,24 +181,19 @@ class FilmRepositoryIT {
         jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 101L, 3L);
         jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 102L, 3L);
 
-        // Предполагаемый список похожих пользователей
         List<Long> sameUserIds = Arrays.asList(2L, 3L);
 
-        // Получение рекомендаций для пользователя с id=1
         List<Long> recommendations = filmRepository.getFilmRecommendations(1L, sameUserIds);
 
-        // Проверка: рекомендации не должны включать уже просмотренные фильмы пользователем с ID=1
         assertThat(recommendations).isNotNull();
         assertThat(recommendations).containsExactlyInAnyOrder(103L, 104L); // например
     }
 
     @Test
     public void shouldReturnEmptyWhenNoRecommendations() {
-        // Создаем пользователей
         jdbcTemplate.update("INSERT INTO USERS (ID, NAME, LOGIN, EMAIL, BIRTHDAY) VALUES (?, ?, ?, ?, ?)",
                 1L, "User1", "user1", "user1@test.com", "1990-01-01");
 
-        // Создаем фильмы без лайков или с лайками только текущего пользователя
         jdbcTemplate.update("INSERT INTO FILM (ID, NAME, DESCRIPTION, RELEASE_DATE, DURATION, MPA_ID) VALUES (?, ?, ?, ?, ?, ?)",
                 100L, "Фильм 1", "Описание 1", "2000-01-01", 120, 1);
 
