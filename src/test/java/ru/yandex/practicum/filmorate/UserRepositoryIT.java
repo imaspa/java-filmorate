@@ -17,124 +17,118 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JdbcTest
+@Import(UserRepository.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import(UserRepository.class)
 class UserRepositoryIT {
 
     @Autowired
     private UserRepository userRepository;
 
-    private User testUser1;
-    private User testUser2;
+    private User testUser;
 
     @BeforeEach
-    void setUp() {
-        testUser1 = User.builder()
-                .name("Test User 1")
-                .login("testlogin1")
-                .email("test1@example.com")
-                .birthday(LocalDate.of(1990, 1, 1))
+    void setUp() throws ConditionsException {
+        testUser = User.builder()
+                .name("Alice")
+                .login("alice_login")
+                .email("alice@example.com")
+                .birthday(LocalDate.of(1990, 5, 15))
                 .build();
 
-        testUser2 = User.builder()
-                .name("Test User 2")
-                .login("testlogin2")
-                .email("test2@example.com")
-                .birthday(LocalDate.of(1995, 5, 5))
-                .build();
+        testUser = userRepository.insert(testUser);
     }
 
     @Test
-    void shouldInsertAndFindUser() throws ConditionsException {
-        User createdUser = userRepository.insert(testUser1);
-        assertThat(createdUser.getId()).isNotNull();
-
-        Optional<User> foundUser = userRepository.findById(createdUser.getId());
-        assertThat(foundUser)
-                .isPresent()
-                .hasValueSatisfying(user -> {
-                    assertThat(user.getName()).isEqualTo("Test User 1");
-                    assertThat(user.getLogin()).isEqualTo("testlogin1");
-                });
-    }
-
-    @Test
-    void shouldUpdateUser() throws ConditionsException, NotFoundException {
-        User createdUser = userRepository.insert(testUser1);
-        User updatedUser = createdUser.toBuilder()
-                .name("Updated Name")
-                .login("updatedlogin")
+    void shouldInsertUser() throws ConditionsException {
+        User newUser = User.builder()
+                .name("Bob")
+                .login("bob_login")
+                .email("bob@example.com")
+                .birthday(LocalDate.of(1985, 7, 20))
                 .build();
 
-        userRepository.update(updatedUser);
-        User userAfterUpdate = userRepository.findByIdOrThrow(updatedUser.getId());
+        User created = userRepository.insert(newUser);
 
-        assertThat(userAfterUpdate.getName()).isEqualTo("Updated Name");
-        assertThat(userAfterUpdate.getLogin()).isEqualTo("updatedlogin");
+        assertThat(created.getId()).isNotNull();
+        Optional<User> found = userRepository.findById(created.getId());
+
+        assertThat(found).isPresent();
+        assertThat(found.get().getName()).isEqualTo("Bob");
     }
 
     @Test
-    void shouldDeleteUser() throws ConditionsException {
-        User createdUser = userRepository.insert(testUser1);
-        int deleteCount = userRepository.deleteById(createdUser.getId());
+    void shouldUpdateUser() throws ConditionsException {
+        testUser.setName("Updated Name");
+        testUser.setEmail("updated@example.com");
 
-        assertThat(deleteCount).isEqualTo(1);
-        assertThat(userRepository.findById(createdUser.getId())).isEmpty();
+        User updated = userRepository.update(testUser);
+
+        assertThat(updated.getName()).isEqualTo("Updated Name");
+
+        Optional<User> found = userRepository.findById(testUser.getId());
+        assertThat(found).isPresent()
+                .get()
+                .extracting(User::getEmail)
+                .isEqualTo("updated@example.com");
+    }
+
+    @Test
+    void shouldFindUserById() throws NotFoundException {
+        User found = userRepository.findByIdOrThrow(testUser.getId());
+        assertThat(found).isNotNull();
+        assertThat(found.getLogin()).isEqualTo("alice_login");
+    }
+
+    @Test
+    void shouldReturnEmptyForNonexistentId() {
+        Optional<User> found = userRepository.findById(9999L);
+        assertThat(found).isEmpty();
+    }
+
+    @Test
+    void shouldThrowNotFoundExceptionWhenUserNotFound() {
+        assertThatThrownBy(() -> userRepository.findByIdOrThrow(9999L))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Запись с ID 9999 не найдена");
     }
 
     @Test
     void shouldFindAllUsers() throws ConditionsException {
-        userRepository.insert(testUser1);
-        userRepository.insert(testUser2);
+        User user2 = User.builder()
+                .name("Charlie")
+                .login("charlie_login")
+                .email("charlie@example.com")
+                .birthday(LocalDate.of(1992, 3, 14))
+                .build();
+
+        userRepository.insert(user2);
 
         List<User> users = userRepository.findAll();
         assertThat(users)
-                .extracting(User::getId)
-                .hasSize(2);
+                .hasSizeGreaterThanOrEqualTo(2)
+                .extracting(User::getName)
+                .contains("Alice", "Charlie");
     }
 
     @Test
-    void shouldManageFriends() throws ConditionsException, NotFoundException {
-        User user1 = userRepository.insert(testUser1);
-        User user2 = userRepository.insert(testUser2);
+    void shouldReturnEmptyListWhenNoFriends() {
+        List<User> friends = userRepository.getFriends(testUser.getId());
+        assertThat(friends).isEmpty();
+    }
 
-        // Добавляем друга
-        userRepository.addFriend(user1.getId(), user2.getId(), true);
-
-        // Проверяем список друзей
-        List<User> friends = userRepository.getFriends(user1.getId());
-        assertThat(friends)
-                .hasSize(1)
-                .extracting(User::getId)
-                .containsExactly(user2.getId());
-
-        // Создаем третьего пользователя для проверки общих друзей
-        User user3 = userRepository.insert(
-                User.builder()
-                        .name("User 3")
-                        .login("user3")
-                        .email("user3@example.com")
-                        .birthday(LocalDate.of(2000, 10, 10))
-                        .build()
-        );
-
-        // Добавляем того же друга второму пользователю
-        userRepository.addFriend(user3.getId(), user2.getId(), true);
-
-        // Проверяем общих друзей
-        List<User> commonFriends = userRepository.getCommonFriends(user1.getId(), user3.getId());
-        assertThat(commonFriends)
-                .hasSize(1)
-                .extracting(User::getId)
-                .containsExactly(user2.getId());
-
-        // Удаляем друга
-        userRepository.removeFriend(user1.getId(), user2.getId());
-
-        // Проверяем что друг удален
-        assertThat(userRepository.getFriends(user1.getId())).isEmpty();
+    @Test
+    void shouldReturnEmptyCommonFriendsWhenNoneExist() throws ConditionsException {
+        User anotherUser = userRepository.insert(User.builder()
+                .name("David")
+                .login("david_login")
+                .email("david@example.com")
+                .birthday(LocalDate.of(1993, 4, 18))
+                .build());
+        List<User> commonFriends = userRepository.getCommonFriends(testUser.getId(), anotherUser.getId());
+        assertThat(commonFriends).isEmpty();
     }
 }

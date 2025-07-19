@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import ru.yandex.practicum.filmorate.data.constant.DirectorSortValue;
 import ru.yandex.practicum.filmorate.data.dto.FilmDto;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
@@ -38,9 +39,19 @@ public class FilmController {
         return filmService.update(filmDto.getId(), filmDto);
     }
 
+    @DeleteMapping("/{filmId}")
+    public void deleteFilm(@PathVariable Long filmId) throws NotFoundException {
+        filmService.remove(filmId);
+    }
+
     @GetMapping
     public List<FilmDto> getFilms() {
         return filmService.getAll();
+    }
+
+    @GetMapping("/search")
+    public List<FilmDto> find(@RequestParam String query, @RequestParam String by) {
+        return filmService.find(query, by);
     }
 
     @GetMapping("/{filmId}")
@@ -59,7 +70,20 @@ public class FilmController {
     }
 
     @GetMapping("/popular")
-    public List<FilmDto> findPopular(@RequestParam(required = false, defaultValue = "10") Long count) {
-        return filmService.findPopular(count);
+    public List<FilmDto> findPopular(@RequestParam(defaultValue = "10") Long count,
+                                     @RequestParam(required = false) Integer year,
+                                     @RequestParam(required = false) Long genreId) {
+        return filmService.getPopularFilms(count, year, genreId);
     }
+
+    @GetMapping("/director/{directorId}")
+    public List<FilmDto> findByDirector(@PathVariable Long directorId, @RequestParam DirectorSortValue sortBy) throws NotFoundException {
+        return filmService.findByDirector(directorId, sortBy);
+    }
+
+    @GetMapping("/common")
+    public List<FilmDto> getCommonFilms(@RequestParam Long userId, @RequestParam Long friendId) throws ConditionsException, NotFoundException {
+        return filmService.getCommonFilms(userId, friendId);
+    }
+
 }

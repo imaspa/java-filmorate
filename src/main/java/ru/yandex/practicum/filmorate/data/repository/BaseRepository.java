@@ -8,7 +8,6 @@ import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.data.model.Identifiable;
 
 import java.sql.PreparedStatement;
-import java.sql.Statement;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,7 +36,8 @@ public abstract class BaseRepository<T extends Identifiable> {
         if (isInsert) {
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(connection -> {
-                PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+                PreparedStatement ps = connection.prepareStatement(sql, new String[]{"ID"});
+                //(sql, Statement.RETURN_GENERATED_KEYS);
                 action.setValues(ps, entity);
                 return ps;
             }, keyHolder);

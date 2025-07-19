@@ -30,7 +30,8 @@ public class MpaRatingService {
     }
 
     public MpaRatingDto getEntity(Long id) throws NotFoundException {
-        return mapper.toDto(repository.findByIdOrThrow(id));
+        var entity = repository.findByIdOrThrow(id);
+        return mapper.toDto(entity);
     }
 
 

@@ -17,12 +17,11 @@ public class UserRepository extends BaseRepository<User> {
     private static final String INSERT_SQL = "INSERT INTO USERS (NAME, LOGIN, EMAIL, BIRTHDAY) VALUES (?, ?, ?, ?)";
     private static final String UPDATE_SQL = "UPDATE USERS SET NAME = ?, LOGIN = ?, EMAIL = ?, BIRTHDAY = ? WHERE ID = ?";
     private static final String FIND_BY_ID_SQL = "SELECT * FROM USERS WHERE ID = ?";
+    private static final String EXISTS_BY_ID_SQL = "SELECT EXISTS(SELECT 1 FROM USERS WHERE ID = ?)";
     private static final String FIND_ALL_SQL = "SELECT * FROM USERS";
     private static final String DELETE_SQL = "DELETE FROM USERS WHERE ID = ?";
 
     // друзья
-    private static final String ADD_FRIEND_SQL = "INSERT INTO FRIENDSHIP (USER_ID, FRIEND_ID, ISFRIEND) VALUES (?, ?, ?)";
-    private static final String REMOVE_FRIEND_SQL = "DELETE FROM FRIENDSHIP WHERE USER_ID = ? AND FRIEND_ID = ?";
     private static final String GET_FRIENDS_SQL = "SELECT u.* FROM USERS u JOIN FRIENDSHIP f ON u.ID = f.FRIEND_ID WHERE f.USER_ID = ?";
     private static final String GET_COMMON_FRIENDS_SQL = "SELECT u.* FROM USERS u JOIN FRIENDSHIP f1 ON u.ID = f1.FRIEND_ID " +
             "JOIN FRIENDSHIP f2 ON u.ID = f2.FRIEND_ID WHERE f1.USER_ID = ? AND f2.USER_ID = ?";
@@ -59,7 +58,8 @@ public class UserRepository extends BaseRepository<User> {
         return findAll(FIND_ALL_SQL, this::mapToUser);
     }
 
-    public int deleteById(Long id) {
+    public int deleteById(Long id) throws NotFoundException {
+        findByIdOrThrow(id);
         return deleteById(DELETE_SQL, id);
     }
 
@@ -68,14 +68,6 @@ public class UserRepository extends BaseRepository<User> {
     }
 
     //-- Друзья
-    public void addFriend(Long userId, Long friendId, Boolean isFriend) {
-        jdbcTemplate.update(ADD_FRIEND_SQL, userId, friendId, isFriend);
-    }
-
-    public void removeFriend(Long userId, Long friendId) {
-        jdbcTemplate.update(REMOVE_FRIEND_SQL, userId, friendId);
-    }
-
     public List<User> getFriends(Long userId) {
         return jdbcTemplate.query(GET_FRIENDS_SQL, (rs, rowNum) -> mapToUser(rs), userId);
     }
@@ -92,5 +84,15 @@ public class UserRepository extends BaseRepository<User> {
                 .email(rs.getString("EMAIL"))
                 .birthday(rs.getDate("BIRTHDAY").toLocalDate())
                 .build();
+    }
+
+    public Boolean existsById(Long id) {
+        return jdbcTemplate.queryForObject(EXISTS_BY_ID_SQL, Boolean.class, id);
+    }
+
+    public void checkExists(Long id) throws NotFoundException {
+        if (!existsById(id)) {
+            throw new NotFoundException("Пользователь с ID " + id + " не найден");
+        }
     }
 }

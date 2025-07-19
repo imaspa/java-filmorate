@@ -13,7 +13,7 @@ import java.util.List;
 public class MpaRatingRepository extends BaseRepository<MpaRating> {
     private static final String FIND_ALL_SQL = "SELECT * FROM MPA_RATING ORDER BY ID";
     private static final String FIND_BY_ID_SQL = "SELECT * FROM MPA_RATING WHERE ID = ?";
-    private static final String EXISTS_BY_ID_SQL = "SELECT COUNT(*) > 0 FROM MPA_RATING WHERE ID = ?";
+    private static final String EXISTS_BY_ID_SQL = "SELECT EXISTS(SELECT 1 FROM MPA_RATING WHERE ID = ?)";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -31,7 +31,7 @@ public class MpaRatingRepository extends BaseRepository<MpaRating> {
     }
 
     public boolean existsById(Long id) {
-        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(EXISTS_BY_ID_SQL, Boolean.class, id));
+        return jdbcTemplate.queryForObject(EXISTS_BY_ID_SQL, Boolean.class, id);
     }
 
     private MpaRating mapToMpaRating(ResultSet rs) throws SQLException {

@@ -1,0 +1,21 @@
+package ru.yandex.practicum.filmorate.data.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Builder(toBuilder = true)
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class FriendshipDto {
+
+    private Long id;
+
+    private Long userId;
+
+    private Long friendId;
+
+    private Boolean isFriend;
+}

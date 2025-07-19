@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import ru.yandex.practicum.filmorate.data.validation.DateMin;
 
 import java.time.LocalDate;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 @Builder(toBuilder = true)
@@ -37,5 +38,7 @@ public class FilmDto {
 
     private MpaRatingDto mpa;
 
-    private Set<GenreDto> genres;
+    private LinkedHashSet<GenreDto> genres;
+
+    private Set<DirectorDto> directors;
 }

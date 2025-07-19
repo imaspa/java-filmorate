@@ -20,6 +20,8 @@ import ru.yandex.practicum.filmorate.data.repository.MpaRatingRepository;
 import ru.yandex.practicum.filmorate.data.repository.UserRepository;
 
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -56,14 +58,12 @@ class FilmRepositoryIT {
 
     @BeforeEach
     void setUp() throws NotFoundException {
-        // Очистка базы в правильном порядке (с учетом foreign key constraints)
         jdbcTemplate.update("DELETE FROM FILM_LIKE");
         jdbcTemplate.update("DELETE FROM FILM_GENRE");
         jdbcTemplate.update("DELETE FROM FRIENDSHIP");
         jdbcTemplate.update("DELETE FROM FILM");
         jdbcTemplate.update("DELETE FROM USERS");
 
-        // Инициализация тестовых данных
         existingMpa1 = mpaRatingRepository.findByIdOrThrow(1L); // G
         existingMpa2 = mpaRatingRepository.findByIdOrThrow(2L); // PG
         existingGenre = genreRepository.findByIdOrThrow(1L); // Комедия
@@ -151,18 +151,160 @@ class FilmRepositoryIT {
     }
 
     @Test
-    void shouldGetPopularFilms() throws ConditionsException, NotFoundException {
+    public void shouldReturnRecommendationsForUserWithMultipleLikes() {
+        // Создаем пользователей
+        jdbcTemplate.update("INSERT INTO USERS (ID, NAME, LOGIN, EMAIL, BIRTHDAY) VALUES (?, ?, ?, ?, ?)",
+                1L, "User1", "user1", "user1@test.com", "1990-01-01");
+        jdbcTemplate.update("INSERT INTO USERS (ID, NAME, LOGIN, EMAIL, BIRTHDAY) VALUES (?, ?, ?, ?, ?)",
+                2L, "User2", "user2", "user2@test.com", "1990-02-02");
+        jdbcTemplate.update("INSERT INTO USERS (ID, NAME, LOGIN, EMAIL, BIRTHDAY) VALUES (?, ?, ?, ?, ?)",
+                3L, "User3", "user3", "user3@test.com", "1990-03-03");
+
+        jdbcTemplate.update("INSERT INTO FILM (ID, NAME, DESCRIPTION, RELEASE_DATE, DURATION, MPA_ID) VALUES (?, ?, ?, ?, ?, ?)",
+                100L, "Film 1", "Description 1", "2000-01-01", 120, 1);
+        jdbcTemplate.update("INSERT INTO FILM (ID, NAME, DESCRIPTION, RELEASE_DATE, DURATION, MPA_ID) VALUES (?, ?, ?, ?, ?, ?)",
+                101L, "Film 2", "Description 2", "2001-01-01", 90, 2);
+        jdbcTemplate.update("INSERT INTO FILM (ID, NAME, DESCRIPTION, RELEASE_DATE, DURATION, MPA_ID) VALUES (?, ?, ?, ?, ?, ?)",
+                102L, "Film 3", "Description 3", "2002-01-01", 110, 3);
+        jdbcTemplate.update("INSERT INTO FILM (ID, NAME, DESCRIPTION, RELEASE_DATE, DURATION, MPA_ID) VALUES (?, ?, ?, ?, ?, ?)",
+                103L, "Film 4", "Description 4", "2003-01-01", 100, 2);
+        jdbcTemplate.update("INSERT INTO FILM (ID, NAME, DESCRIPTION, RELEASE_DATE, DURATION, MPA_ID) VALUES (?, ?, ?, ?, ?, ?)",
+                104L, "Film 5", "Description 5", "2004-01-01", 130, 3);
+
+        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 100L, 1L);
+        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 101L, 1L);
+        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 102L, 1L);
+
+        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 103L, 2L);
+        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 104L, 2L);
+
+        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 101L, 3L);
+        jdbcTemplate.update("INSERT INTO FILM_LIKE (FILM_ID ,USER_ID) VALUES (?, ?)", 102L, 3L);
+
+        List<Long> sameUserIds = Arrays.asList(2L, 3L);
+
+        List<Long> recommendations = filmRepository.getFilmRecommendations(1L, sameUserIds);
+
+        assertThat(recommendations).isNotNull();
+        assertThat(recommendations).containsExactlyInAnyOrder(103L, 104L); // например
+    }
+
+    @Test
+    public void shouldReturnEmptyWhenNoRecommendations() {
+        jdbcTemplate.update("INSERT INTO USERS (ID, NAME, LOGIN, EMAIL, BIRTHDAY) VALUES (?, ?, ?, ?, ?)",
+                1L, "User1", "user1", "user1@test.com", "1990-01-01");
+
+        jdbcTemplate.update("INSERT INTO FILM (ID, NAME, DESCRIPTION, RELEASE_DATE, DURATION, MPA_ID) VALUES (?, ?, ?, ?, ?, ?)",
+                100L, "Фильм 1", "Описание 1", "2000-01-01", 120, 1);
+
+        // Нет лайков от других пользователей
+        List<Long> sameUserIds = Arrays.asList();
+        List<Long> recommendations = filmRepository.getFilmRecommendations(10L, sameUserIds);
+        System.out.println(recommendations.stream().toList());
+        assertThat(recommendations).isEmpty();
+    }
+
+    @Test
+    void shouldGetPopularFilms() throws ConditionsException {
         User createdUser = userRepository.insert(testUser);
         Film createdFilm1 = filmRepository.insert(testFilm1);
         filmRepository.insert(testFilm2);
 
-        // Добавляем лайк
         filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
 
-        List<Film> popularFilms = filmRepository.getPopularFilms(1L);
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L, null, null);
         assertThat(popularFilms)
                 .hasSize(1)
                 .extracting(Film::getId)
                 .containsExactly(createdFilm1.getId());
+    }
+
+    @Test
+    void shouldGetPopularFilmsByYears() throws ConditionsException {
+        User createdUser = userRepository.insert(testUser);
+        Film createdFilm1 = filmRepository.insert(testFilm1);
+        filmRepository.insert(testFilm2);
+
+        filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
+
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L, 2020, null);
+        assertThat(popularFilms)
+                .hasSize(1)
+                .extracting(Film::getId)
+                .containsExactly(createdFilm1.getId());
+    }
+
+    @Test
+    void shouldGetPopularFilmsByGenre() throws ConditionsException {
+        testFilm1.setGenres(Collections.singleton(existingGenre));
+        User createdUser = userRepository.insert(testUser);
+        Film createdFilm1 = filmRepository.insert(testFilm1);
+        filmRepository.insert(testFilm2);
+
+        filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
+
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L, null, 1L);
+        assertThat(popularFilms)
+                .hasSize(1)
+                .extracting(Film::getId)
+                .containsExactly(createdFilm1.getId());
+    }
+
+    @Test
+    void shouldGetPopularFilmsByYearsAndGenre() throws ConditionsException {
+        testFilm1.setGenres(Collections.singleton(existingGenre));
+        User createdUser = userRepository.insert(testUser);
+        Film createdFilm1 = filmRepository.insert(testFilm1);
+        filmRepository.insert(testFilm2);
+
+        filmRepository.addLike(createdFilm1.getId(), createdUser.getId());
+
+        List<Film> popularFilms = filmRepository.getPopularFilms(1L, 2020, 1L);
+        assertThat(popularFilms)
+                .hasSize(1)
+                .extracting(Film::getId)
+                .containsExactly(createdFilm1.getId());
+    }
+
+    @Test
+    void shouldGetCommonFilms() throws ConditionsException {
+        User user = User.builder()
+                .name("Test User 2")
+                .login("test2login")
+                .email("test2@example.com")
+                .birthday(LocalDate.of(1992, 2, 3))
+                .build();
+        Film createdFilm1 = filmRepository.insert(testFilm1);
+        User createdUser1 = userRepository.insert(testUser);
+        User createdUser2 = userRepository.insert(user);
+
+        filmRepository.addLike(createdFilm1.getId(), createdUser1.getId());
+        filmRepository.addLike(createdFilm1.getId(), createdUser2.getId());
+
+        List<Film> commonFilms = filmRepository.getCommonFilms(createdUser1.getId(), createdUser2.getId());
+        assertThat(commonFilms)
+                .hasSize(1)
+                .extracting(Film::getId)
+                .containsExactly(createdFilm1.getId());
+    }
+
+    @Test
+    void shouldGetEmptyCommonFilms() throws ConditionsException {
+        User user = User.builder()
+                .name("Test User 2")
+                .login("test2login")
+                .email("test2@example.com")
+                .birthday(LocalDate.of(1992, 2, 3))
+                .build();
+        Film createdFilm1 = filmRepository.insert(testFilm1);
+        Film createdFilm2 = filmRepository.insert(testFilm2);
+        User createdUser1 = userRepository.insert(testUser);
+        User createdUser2 = userRepository.insert(user);
+
+        filmRepository.addLike(createdFilm1.getId(), createdUser1.getId());
+        filmRepository.addLike(createdFilm2.getId(), createdUser2.getId());
+
+        List<Film> commonFilms = filmRepository.getCommonFilms(createdUser1.getId(), createdUser2.getId());
+        assertThat(commonFilms).isEmpty();
     }
 }

@@ -5,13 +5,21 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
+import ru.yandex.practicum.filmorate.data.dto.EventLogDto;
+import ru.yandex.practicum.filmorate.data.dto.FilmDto;
 import ru.yandex.practicum.filmorate.data.dto.UserDto;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.data.mapper.EventLogMapper;
+import ru.yandex.practicum.filmorate.data.mapper.FilmMapper;
 import ru.yandex.practicum.filmorate.data.mapper.UserMapper;
+import ru.yandex.practicum.filmorate.data.model.Film;
 import ru.yandex.practicum.filmorate.data.model.User;
+import ru.yandex.practicum.filmorate.data.repository.EventLogRepository;
+import ru.yandex.practicum.filmorate.data.repository.FilmRepository;
 import ru.yandex.practicum.filmorate.data.repository.UserRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -22,7 +30,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository repository;
+    private final FilmRepository filmRepository;
+    private final EventLogRepository eventLogRepository;
+    private final FriendshipService friendshipService;
     private final UserMapper mapper;
+    private final FilmMapper mapperFilm;
+    private final EventLogMapper eventLogMapper;
 
     public UserDto add(@Valid UserDto userDto) throws ConditionsException {
         log.info("Создание пользователя (старт). Логин: {}", userDto.getLogin());
@@ -34,10 +47,17 @@ public class UserService {
 
     public UserDto update(Long userId, @Valid UserDto userDto) throws ConditionsException, NotFoundException {
         log.info("Обновление пользователя (старт). Логин: {}", userDto.getLogin());
-        var user = mapper.map(repository.findByIdOrThrow(userId), userDto);
+        var user = repository.findByIdOrThrow(userId);
+        user = mapper.map(user, userDto);
         user = repository.update(user);
         log.info("Обновление пользователя (стоп). Логин: {}", userDto.getLogin());
         return mapper.toDto(user);
+    }
+
+    public void remove(Long userId) throws NotFoundException {
+        log.info("Удаление пользователя (старт). Пользователь: {}", userId);
+        repository.deleteById(userId);
+        log.info("Удаление пользователя (стоп). Пользователь: {}", userId);
     }
 
     public List<UserDto> getAll() {
@@ -51,38 +71,36 @@ public class UserService {
     }
 
     public UserDto getUser(Long userId) throws NotFoundException {
-        return mapper.toDto(repository.findByIdOrThrow(userId));
+        var entity = repository.findByIdOrThrow(userId);
+        return mapper.toDto(entity);
     }
-
 
     public void addFriend(Long userId, Long friendId) throws NotFoundException, ConditionsException {
         log.info("Добавление в друзья (старт). кто: {} к кому: {}", friendId, userId);
-        repository.findByIdOrThrow(userId);
-        repository.findByIdOrThrow(friendId);
-
+        validateFriends(userId, friendId);
         if (Objects.equals(userId, friendId)) {
             throw new ConditionsException("Нельзя добавить самого себя в друзья");
         }
 
-        // Добавляем дружбу (статус false - запрос на дружбу)
-        repository.addFriend(userId, friendId, false);
+        friendshipService.addFriend(userId, friendId, false);
         log.info("Добавление в друзья (стоп). кто: {} к кому: {}", friendId, userId);
     }
 
-    public void removeFriend(Long userId, Long friendId) throws NotFoundException {
+    private void validateFriends(Long userId, Long friendId) throws NotFoundException, ConditionsException {
+        repository.checkExists(userId);
+        repository.checkExists(friendId);
+    }
+
+    public void removeFriend(Long userId, Long friendId) throws NotFoundException, ConditionsException {
         log.info("Удаление из друзей (старт). кто: {} от кого: {}", friendId, userId);
-
-        // Проверка существования пользователей
-        repository.findByIdOrThrow(userId);
-        repository.findByIdOrThrow(friendId);
-
-        repository.removeFriend(userId, friendId);
+        validateFriends(userId, friendId);
+        friendshipService.removeFriend(userId, friendId);
         log.info("Удаление из друзей (стоп). кто: {} от кого: {}", friendId, userId);
     }
 
     public List<UserDto> getUserFriends(Long userId) throws NotFoundException {
         log.info("Список друзей (старт): {}", userId);
-        repository.findByIdOrThrow(userId);
+        repository.checkExists(userId);
         List<UserDto> friends = repository.getFriends(userId)
                 .stream()
                 .map(mapper::toDto)
@@ -94,14 +112,10 @@ public class UserService {
 
     public List<UserDto> getCommonFriends(Long userId, Long otherId) throws NotFoundException, ConditionsException {
         log.info("Общие друзья пользователей (старт). пользователь 1: {} пользователь 2: {}", userId, otherId);
-
-        repository.findByIdOrThrow(userId);
-        repository.findByIdOrThrow(otherId);
-
+        validateFriends(userId, otherId);
         if (Objects.equals(userId, otherId)) {
             throw new ConditionsException("Нельзя искать общих друзей у одного пользователя");
         }
-
         List<UserDto> commonFriends = repository.getCommonFriends(userId, otherId)
                 .stream()
                 .map(mapper::toDto)
@@ -110,4 +124,40 @@ public class UserService {
         log.info("Общие друзья пользователей (стоп). пользователь 1: {} пользователь 2: {}", userId, otherId);
         return commonFriends;
     }
+
+    public List<FilmDto> getRecommendations(Long idUser, Integer limit) throws NotFoundException {
+        List<Long> sameUserIds = filmRepository.getUsersWithSameLikes(idUser, limit);
+        log.info("Рекомендации для пользователя (старт). Id пользователя {}", idUser);
+        if (sameUserIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> recommendations = filmRepository.getFilmRecommendations(idUser, sameUserIds);
+        List<Film> films = new ArrayList<>();
+        for (Long recommendation : recommendations) {
+            Film film = filmRepository.findByIdOrThrow(recommendation);
+            films.add(film);
+        }
+        log.info("Рекомендации для пользователя (стоп). Id пользователя: {}, Id фильмов: {}", idUser,
+                films.stream().map(Film::getId).collect(Collectors.toList()));
+        return films.stream()
+                .map(mapperFilm::toDto)
+                .collect(Collectors.toList());
+    }
+
+    public List<EventLogDto> getFeedByUserId(Long userId, Long limit) throws NotFoundException {
+        log.info("Лента событий (старт) userId: {}", userId);
+        repository.checkExists(userId);
+        var feed = eventLogRepository.getFeedByUserId(userId, limit)
+                .stream()
+                .map(eventLogMapper::toDto)
+                .collect(Collectors.toList());
+        log.info("Лента событий (стоп): userId: {}", userId);
+        return feed;
+    }
+
+    public UserDto findById(Long userId) throws NotFoundException {
+        var entity = repository.findByIdOrThrow(userId);
+        return mapper.toDto(entity);
+    }
+
 }
