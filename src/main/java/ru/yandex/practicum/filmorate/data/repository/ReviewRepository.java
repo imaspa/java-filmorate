@@ -17,6 +17,7 @@ public class ReviewRepository extends BaseRepository<Review> {
     private static final String INSERT_SQL = "INSERT INTO REVIEW (user_id, film_id, content, is_positive, useful) VALUES (?,?,?,?,?)";
     private static final String UPDATE_SQL = "UPDATE REVIEW SET user_id = ?,film_id = ?,content = ?,is_positive = ? WHERE id=?";
     private static final String FIND_BY_ID_SQL = "SELECT * FROM REVIEW WHERE id = ?";
+    private static final String EXISTS_BY_ID_SQL = "SELECT EXISTS(SELECT 1 FROM REVIEW WHERE ID = ?)";
     private static final String DELETE_REVIEW_BY_ID = "DELETE FROM REVIEW WHERE id = ?";
     private static final String FIND_ALL = "SELECT * FROM REVIEW ORDER BY USEFUL DESC LIMIT ?";
     private static final String FIND_ALL_BY_FILM = "SELECT * FROM REVIEW WHERE film_id = ? ORDER BY USEFUL DESC LIMIT ?";
@@ -78,7 +79,8 @@ public class ReviewRepository extends BaseRepository<Review> {
         return mapToReview(rs);
     }
 
-    public int deleteById(Long id) {
+    public int deleteById(Long id) throws NotFoundException {
+        findByIdOrThrow(id);
         return deleteById(DELETE_REVIEW_BY_ID, id);
     }
 
@@ -89,38 +91,42 @@ public class ReviewRepository extends BaseRepository<Review> {
         return jdbcTemplate.query(FIND_ALL, this::mapResultSetToReview, count);
     }
 
-    public void addLike(Long id, Long userid, boolean isDislike) {
-        Optional<Boolean> isDislikeInBD = getIsDislike(id, userid);
-        int count = jdbcTemplate.update(LIKE, id, userid, isDislike);
-        if (isDislikeInBD.isPresent()) {
-            if (isDislikeInBD.get().equals(isDislike)) return;
+    public void addLike(Long id, Long userId, boolean isDislike) {
+        Boolean existingReaction = getIsDislike(id, userId);
+        int count = jdbcTemplate.update(LIKE, id, userId, isDislike);
+        if (existingReaction != null) {
+            if (existingReaction == isDislike) {
+                return;
+            }
             count++;
         }
-        if (isDislike) {
-            jdbcTemplate.update(REVIEW_USEFUL_DOWN, count, id);
-        } else {
-            jdbcTemplate.update(REVIEW_USEFUL_UP, count, id);
-        }
+        String updateQuery = isDislike ? REVIEW_USEFUL_DOWN : REVIEW_USEFUL_UP;
+        jdbcTemplate.update(updateQuery, count, id);
     }
 
     public void deleteLike(Long id, Long userid, boolean isDislike) {
         int count = jdbcTemplate.update(DELETE_LIKE, id, userid);
         if (count == 0) return;
-        if (isDislike) {
-            jdbcTemplate.update(REVIEW_USEFUL_UP, count, id);
-        } else {
-            jdbcTemplate.update(REVIEW_USEFUL_DOWN, count, id);
-        }
 
+        String updateQuery = isDislike ? REVIEW_USEFUL_UP : REVIEW_USEFUL_DOWN;
+        jdbcTemplate.update(updateQuery, count, id);
     }
 
-    public Optional<Boolean> getIsDislike(Long id, Long userid) {
-        Boolean isDislike;
+    public Boolean getIsDislike(Long id, Long userId) {
         try {
-            isDislike = jdbcTemplate.queryForObject(SELECT_LIKE, Boolean.class, id, userid);
+            return jdbcTemplate.queryForObject(SELECT_LIKE, Boolean.class, id, userId);
         } catch (EmptyResultDataAccessException e) {
-            return Optional.empty();
+            return null;
         }
-        return Optional.of(isDislike);
+    }
+
+    public Boolean existsById(Long id) {
+        return jdbcTemplate.queryForObject(EXISTS_BY_ID_SQL, Boolean.class, id);
+    }
+
+    public void checkExists(Long id) throws NotFoundException {
+        if (!existsById(id)) {
+            throw new NotFoundException("Отзыв с ID " + id + " не найден");
+        }
     }
 }

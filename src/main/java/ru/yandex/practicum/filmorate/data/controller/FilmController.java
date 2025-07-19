@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import ru.yandex.practicum.filmorate.data.constant.DirectorSortValue;
 import ru.yandex.practicum.filmorate.data.dto.FilmDto;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
@@ -76,7 +77,7 @@ public class FilmController {
     }
 
     @GetMapping("/director/{directorId}")
-    public List<FilmDto> findByDirector(@PathVariable Long directorId, @RequestParam String sortBy) throws NotFoundException {
+    public List<FilmDto> findByDirector(@PathVariable Long directorId, @RequestParam DirectorSortValue sortBy) throws NotFoundException {
         return filmService.findByDirector(directorId, sortBy);
     }
 

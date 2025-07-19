@@ -17,6 +17,7 @@ public class UserRepository extends BaseRepository<User> {
     private static final String INSERT_SQL = "INSERT INTO USERS (NAME, LOGIN, EMAIL, BIRTHDAY) VALUES (?, ?, ?, ?)";
     private static final String UPDATE_SQL = "UPDATE USERS SET NAME = ?, LOGIN = ?, EMAIL = ?, BIRTHDAY = ? WHERE ID = ?";
     private static final String FIND_BY_ID_SQL = "SELECT * FROM USERS WHERE ID = ?";
+    private static final String EXISTS_BY_ID_SQL = "SELECT EXISTS(SELECT 1 FROM USERS WHERE ID = ?)";
     private static final String FIND_ALL_SQL = "SELECT * FROM USERS";
     private static final String DELETE_SQL = "DELETE FROM USERS WHERE ID = ?";
 
@@ -57,7 +58,8 @@ public class UserRepository extends BaseRepository<User> {
         return findAll(FIND_ALL_SQL, this::mapToUser);
     }
 
-    public int deleteById(Long id) {
+    public int deleteById(Long id) throws NotFoundException {
+        findByIdOrThrow(id);
         return deleteById(DELETE_SQL, id);
     }
 
@@ -82,5 +84,15 @@ public class UserRepository extends BaseRepository<User> {
                 .email(rs.getString("EMAIL"))
                 .birthday(rs.getDate("BIRTHDAY").toLocalDate())
                 .build();
+    }
+
+    public Boolean existsById(Long id) {
+        return jdbcTemplate.queryForObject(EXISTS_BY_ID_SQL, Boolean.class, id);
+    }
+
+    public void checkExists(Long id) throws NotFoundException {
+        if (!existsById(id)) {
+            throw new NotFoundException("Пользователь с ID " + id + " не найден");
+        }
     }
 }

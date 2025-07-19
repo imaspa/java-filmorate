@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 public class DirectorRepository extends BaseRepository<Director> {
     private static final String INSERT_SQL = "INSERT INTO DIRECTOR (name) VALUES (?)";
     private static final String FIND_ALL = "SELECT * FROM DIRECTOR ORDER BY ID";
+    private static final String EXISTS_BY_ID_SQL = "SELECT EXISTS(SELECT 1 FROM DIRECTOR WHERE ID = ?)";
     private static final String GET_DIRECTOR_BY_ID = "SELECT * FROM DIRECTOR WHERE ID =?";
     private static final String UPDATE_DIRECTOR = "UPDATE DIRECTOR SET name = ? WHERE ID = ?";
     private static final String DELETE_DIRECTOR = "DELETE FROM DIRECTOR WHERE ID = ?";
@@ -65,10 +66,20 @@ public class DirectorRepository extends BaseRepository<Director> {
         return deleteById(DELETE_DIRECTOR, id);
     }
 
-    public boolean isExistsAllDirectors(Set<Director> directors) {
+    public boolean isExistAllDirectors(Set<Director> directors) {
         if ((directors == null) || (directors.isEmpty())) return true;
         String ids = directors.stream().map(Director::getId).map(String::valueOf).collect(Collectors.joining(", "));
         String sql = String.format(EXIST_ALL_BY_IDS_SQL, ids);
-        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, directors.size()));
+        return jdbcTemplate.queryForObject(sql, Boolean.class, directors.size());
+    }
+
+    public Boolean existsById(Long id) {
+        return jdbcTemplate.queryForObject(EXISTS_BY_ID_SQL, Boolean.class, id);
+    }
+
+    public void checkExists(Long id) throws NotFoundException {
+        if (!existsById(id)) {
+            throw new NotFoundException("Режиссер с ID " + id + " не найден");
+        }
     }
 }

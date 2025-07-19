@@ -4,8 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import ru.yandex.practicum.filmorate.data.model.constant.EventType;
-import ru.yandex.practicum.filmorate.data.model.constant.Operation;
+import ru.yandex.practicum.filmorate.data.constant.EventType;
+import ru.yandex.practicum.filmorate.data.constant.Operation;
 
 import java.time.LocalDate;
 

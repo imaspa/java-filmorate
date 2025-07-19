@@ -4,9 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
+import ru.yandex.practicum.filmorate.data.constant.EventType;
+import ru.yandex.practicum.filmorate.data.constant.Operation;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
-import ru.yandex.practicum.filmorate.data.model.constant.EventType;
-import ru.yandex.practicum.filmorate.data.model.constant.Operation;
 import ru.yandex.practicum.filmorate.data.repository.EventLogRepository;
 
 @Slf4j

@@ -5,15 +5,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
+import ru.yandex.practicum.filmorate.data.constant.DirectorSortValue;
+import ru.yandex.practicum.filmorate.data.constant.EventType;
+import ru.yandex.practicum.filmorate.data.constant.Operation;
 import ru.yandex.practicum.filmorate.data.dto.FilmDto;
+import ru.yandex.practicum.filmorate.data.dto.GenreDto;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.data.mapper.DirectorMapper;
 import ru.yandex.practicum.filmorate.data.mapper.FilmMapper;
-import ru.yandex.practicum.filmorate.data.model.Director;
 import ru.yandex.practicum.filmorate.data.model.Film;
-import ru.yandex.practicum.filmorate.data.model.Genre;
-import ru.yandex.practicum.filmorate.data.model.constant.EventType;
-import ru.yandex.practicum.filmorate.data.model.constant.Operation;
 import ru.yandex.practicum.filmorate.data.repository.DirectorRepository;
 import ru.yandex.practicum.filmorate.data.repository.FilmRepository;
 import ru.yandex.practicum.filmorate.data.repository.GenreRepository;
@@ -34,6 +35,7 @@ public class FilmService {
     private final FilmRepository repository;
     private final UserRepository repositoryUser;
     private final FilmMapper mapper;
+    private final DirectorMapper mapperDirector;
     private final MpaRatingRepository repositoryMpaRating;
     private final GenreRepository repositoryGenre;
     private final DirectorRepository repositoryDirector;
@@ -42,8 +44,8 @@ public class FilmService {
 
     public FilmDto add(@Valid FilmDto filmDto) throws ConditionsException, NotFoundException {
         log.info("Создание фильма (старт). Наименование: {}", filmDto.getName());
+        validateFilmRelations(filmDto);
         Film film = mapper.toEntity(filmDto);
-        validateFilmRelations(film);
         film = repository.insert(film);
         log.info("Создание фильма (стоп). Наименование: {}", filmDto.getName());
         return mapper.toDto(film);
@@ -51,8 +53,9 @@ public class FilmService {
 
     public FilmDto update(Long filmId, @Valid FilmDto filmDto) throws NotFoundException, ConditionsException {
         log.info("Обновление фильма (старт). Наименование: {}", filmDto.getName());
-        var film = mapper.map(repository.findByIdOrThrow(filmId), filmDto);
-        validateFilmRelations(film);
+        validateFilmRelations(filmDto);
+        var film = repository.findByIdOrThrow(filmId);
+        film = mapper.map(film, filmDto);
         film = repository.update(film);
         log.info("Обновление фильма (стоп). Наименование: {}", filmDto.getName());
         return mapper.toDto(film);
@@ -74,15 +77,13 @@ public class FilmService {
 
     public void remove(Long filmId) throws NotFoundException {
         log.info("Удаление фильма (старт). Фильм: {}", filmId);
-        repository.findByIdOrThrow(filmId);
         repository.deleteById(filmId);
         log.info("Удаление фильма (стоп). Фильм: {}", filmId);
     }
 
     public void addLike(Long filmId, Long userId) throws NotFoundException, ConditionsException {
         log.info("Добавить лайк фильму (старт). Пользователь: {}, фильм: {}", userId, filmId);
-        repositoryUser.findByIdOrThrow(userId);
-        repository.findByIdOrThrow(filmId);
+        validateExistsFilmAndUser(filmId, userId);
         repository.addLike(filmId, userId);
         eventLogService.add(userId, filmId, EventType.LIKE, Operation.ADD);
         log.info("Добавить лайк фильму (стоп). Пользователь: {}, фильм: {}", userId, filmId);
@@ -90,9 +91,7 @@ public class FilmService {
 
     public void removeLike(Long filmId, Long userId) throws NotFoundException, ConditionsException {
         log.info("Удалить лайк (старт). Пользователь: {}, фильм: {}", userId, filmId);
-        repositoryUser.findByIdOrThrow(userId);
-        repository.findByIdOrThrow(filmId);
-
+        validateExistsFilmAndUser(filmId, userId);
         repository.removeLike(filmId, userId);
         eventLogService.add(userId, filmId, EventType.LIKE, Operation.REMOVE);
         log.info("Удалить лайк (стоп). Пользователь: {}, фильм: {}", userId, filmId);
@@ -108,34 +107,50 @@ public class FilmService {
         return result;
     }
 
-    private void validateFilmRelations(Film film) throws NotFoundException {
+    private void validateFilmRelations(FilmDto filmDto) throws NotFoundException {
         // Проверка MPA
-        if (film.getMpa() == null || film.getMpa().getId() == null) {
+        if (filmDto.getMpa() == null || filmDto.getMpa().getId() == null) {
             throw new NotFoundException("MPA рейтинг должен быть указан");
         }
-        if (!repositoryMpaRating.existsById(film.getMpa().getId())) {
-            throw new NotFoundException("Рейтинг MPA с ID " + film.getMpa().getId() + " не найден");
+        if (!repositoryMpaRating.existsById(filmDto.getMpa().getId())) {
+            throw new NotFoundException("Рейтинг MPA с ID " + filmDto.getMpa().getId() + " не найден");
         }
-
         // Проверка жанров
-        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
-            List<Long> genreIds = film.getGenres().stream()
-                    .map(Genre::getId)
+        if (filmDto.getGenres() != null && !filmDto.getGenres().isEmpty()) {
+            List<Long> genreIds = filmDto.getGenres().stream()
+                    .map(GenreDto::getId)
                     .collect(Collectors.toList());
-
             if (!repositoryGenre.existAllByIds(genreIds)) {
                 throw new NotFoundException("Один или несколько жанров не найдены");
             }
         }
         // Проверка режиссеров
-        if (!repositoryDirector.isExistsAllDirectors(film.getDirectors())) {
-            throw new NotFoundException("Один или несколько режассёров не найдены");
+        var film = mapper.toEntity(filmDto);
+        if (!repositoryDirector.isExistAllDirectors(film.getDirectors())) {
+            throw new NotFoundException("Один или несколько режиссёров не найдены");
         }
     }
 
-    public List<FilmDto> findByDirector(Long directorId, String sortBy) throws NotFoundException {
+    private void validateExistsFilmAndUser(Long filmId, Long userId) throws NotFoundException {
+        repositoryUser.checkExists(userId);
+        repository.checkExists(filmId);
+    }
+
+    private void validateDirectors(Long directorId) throws NotFoundException {
+        repositoryDirector.checkExists(directorId);
+    }
+
+    private void validateCommonFilms(Long userId, Long friendId) throws NotFoundException, ConditionsException {
+        if (Objects.equals(userId, friendId)) {
+            throw new ConditionsException("Нельзя искать общие фильмы у одного пользователя");
+        }
+        repositoryUser.checkExists(userId);
+        repositoryUser.checkExists(friendId);
+    }
+
+    public List<FilmDto> findByDirector(Long directorId, DirectorSortValue sortBy) throws NotFoundException {
         log.info("Запрос списка фильмов режиссёра id = {} sortBy = {}", directorId, sortBy);
-        Director director = repositoryDirector.getDirectorById(directorId);
+        validateDirectors(directorId);
         return repository.getFilmByDirector(directorId, sortBy)
                 .stream()
                 .map(mapper::toDto)
@@ -158,17 +173,9 @@ public class FilmService {
 
     public List<FilmDto> getCommonFilms(Long userId, Long friendId) throws NotFoundException, ConditionsException {
         log.info("Общие фильмы пользователей (старт). пользователь 1: {} пользователь 2: {}", userId, friendId);
-        repositoryUser.findByIdOrThrow(userId);
-        repositoryUser.findByIdOrThrow(friendId);
-
-        if (Objects.equals(userId, friendId)) {
-            throw new ConditionsException("Нельзя искать общие фильмы у одного пользователя");
-        }
-
-        log.info("Общие фильмы пользователей (стоп). пользователь 1: {} пользователь 2: {}", userId, friendId);
-
+        validateCommonFilms(userId, friendId);
         List<Film> films = repository.getCommonFilms(userId, friendId);
-
+        log.info("Общие фильмы пользователей (стоп). пользователь 1: {} пользователь 2: {}", userId, friendId);
         return films.stream()
                 .distinct()
                 .map(mapper::toDto)

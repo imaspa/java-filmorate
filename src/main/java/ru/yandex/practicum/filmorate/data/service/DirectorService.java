@@ -11,7 +11,6 @@ import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.data.mapper.DirectorMapper;
 import ru.yandex.practicum.filmorate.data.model.Director;
 import ru.yandex.practicum.filmorate.data.repository.DirectorRepository;
-import ru.yandex.practicum.filmorate.data.repository.FilmRepository;
 
 import java.util.List;
 
@@ -21,7 +20,6 @@ import java.util.List;
 @Validated
 public class DirectorService {
     private final DirectorRepository repository;
-    private final FilmRepository filmRepository;
     private final DirectorMapper mapper;
 
     public DirectorDto add(@Valid DirectorDto directorDto) throws ConditionsException {
@@ -45,7 +43,8 @@ public class DirectorService {
 
     public DirectorDto update(@Valid DirectorDto directorDto) throws NotFoundException, ConditionsException {
         log.info("Изменение режиссера (старт) id = {}, name = {}", directorDto.getId(), directorDto.getName());
-        Director director = mapper.map(repository.getDirectorById(directorDto.getId()), directorDto);
+        var director = repository.getDirectorById(directorDto.getId());
+        director = mapper.map(director, directorDto);
         log.info("Изменение режиссера (стоп) id = {}, name = {}", directorDto.getId(), directorDto.getName());
         return mapper.toDto(repository.update(director));
 

@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 public class GenreRepository extends BaseRepository<Genre> {
     private static final String FIND_ALL_SQL = "SELECT * FROM GENRE ORDER BY ID";
     private static final String FIND_BY_ID_SQL = "SELECT * FROM GENRE WHERE ID = ?";
-    private static final String EXISTS_BY_ID_SQL = "SELECT COUNT(*) > 0 FROM GENRE WHERE ID = ?";
+    private static final String EXISTS_BY_ID_SQL = "SELECT EXISTS(SELECT 1 FROM GENRE WHERE ID = ?)";
     private static final String EXIST_ALL_BY_IDS_SQL = "SELECT COUNT(*) = ? FROM GENRE WHERE ID IN (%s)";
 
     private final JdbcTemplate jdbcTemplate;
@@ -33,7 +33,7 @@ public class GenreRepository extends BaseRepository<Genre> {
     }
 
     public boolean existsById(Long id) {
-        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(EXISTS_BY_ID_SQL, Boolean.class, id));
+        return jdbcTemplate.queryForObject(EXISTS_BY_ID_SQL, Boolean.class, id);
     }
 
     public boolean existAllByIds(List<Long> ids) {
@@ -42,7 +42,7 @@ public class GenreRepository extends BaseRepository<Genre> {
         }
         String inClause = ids.stream().map(String::valueOf).collect(Collectors.joining(","));
         String sql = String.format(EXIST_ALL_BY_IDS_SQL, inClause);
-        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, ids.size()));
+        return jdbcTemplate.queryForObject(sql, Boolean.class, ids.size());
     }
 
     private Genre mapToGenre(ResultSet rs) throws SQLException {

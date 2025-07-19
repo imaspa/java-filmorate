@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.data.repository;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import ru.yandex.practicum.filmorate.data.constant.DirectorSortValue;
 import ru.yandex.practicum.filmorate.data.exception.ConditionsException;
 import ru.yandex.practicum.filmorate.data.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.data.model.Director;
@@ -27,6 +28,7 @@ public class FilmRepository extends BaseRepository<Film> {
     private static final String INSERT_SQL = "INSERT INTO FILM (NAME, DESCRIPTION, RELEASE_DATE, DURATION, MPA_ID) VALUES (?, ?, ?, ?, ?)";
     private static final String UPDATE_SQL = "UPDATE FILM SET NAME = ?, DESCRIPTION = ?, RELEASE_DATE = ?, DURATION = ?, MPA_ID = ? WHERE ID = ?";
     private static final String FIND_BY_ID_SQL = "SELECT f.*, m.NAME AS MPA_NAME FROM FILM f JOIN MPA_RATING m ON f.MPA_ID = m.ID WHERE f.ID = ?";
+    private static final String EXISTS_BY_ID_SQL = "SELECT EXISTS(SELECT 1 FROM FILM WHERE ID = ?)";
     private static final String FIND_ALL_SQL = """
             SELECT
                 f.ID AS FILM_ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION,
@@ -47,7 +49,7 @@ public class FilmRepository extends BaseRepository<Film> {
     private static final String INSERT_GENRE_SQL = "INSERT INTO FILM_GENRE (FILM_ID, GENRE_ID) VALUES (?, ?)";
     private static final String DELETE_GENRES_SQL = "DELETE FROM FILM_GENRE WHERE FILM_ID = ?";
     private static final String GET_GENRES_SQL = "SELECT g.* FROM GENRE g JOIN FILM_GENRE fg ON g.ID = fg.GENRE_ID WHERE fg.FILM_ID = ?";
-    private static final String CHECK_LIKE_EXISTS_SQL = "SELECT COUNT(*) > 0 FROM FILM_LIKE WHERE FILM_ID = ? AND USER_ID = ?";
+    private static final String CHECK_LIKE_EXISTS_SQL = "SELECT EXISTS (SELECT 1 FROM FILM_LIKE WHERE FILM_ID = ? AND USER_ID = ?)";
     private static final String ADD_LIKE_SQL = "INSERT INTO FILM_LIKE (FILM_ID, USER_ID) VALUES (?, ?)";
     private static final String REMOVE_LIKE_SQL = "DELETE FROM FILM_LIKE WHERE FILM_ID = ? AND USER_ID = ?";
     private static final String GET_LIKES_SQL = "SELECT USER_ID FROM FILM_LIKE WHERE FILM_ID = ?";
@@ -161,6 +163,16 @@ public class FilmRepository extends BaseRepository<Film> {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    public Boolean existsById(Long id) {
+        return jdbcTemplate.queryForObject(EXISTS_BY_ID_SQL, Boolean.class, id);
+    }
+
+    public void checkExists(Long id) throws NotFoundException {
+        if (!existsById(id)) {
+            throw new NotFoundException("Фильм с ID " + id + " не найден");
+        }
+    }
+
     public Film insert(Film film) throws ConditionsException {
         Film insertedFilm = insert(INSERT_SQL, (ps, f) -> {
             ps.setString(1, f.getName());
@@ -217,7 +229,8 @@ public class FilmRepository extends BaseRepository<Film> {
         return film;
     }
 
-    public int deleteById(Long id) {
+    public int deleteById(Long id) throws NotFoundException {
+        findByIdOrThrow(id);
         return deleteById(DELETE_SQL, id);
     }
 
@@ -378,18 +391,10 @@ public class FilmRepository extends BaseRepository<Film> {
                 rs.getString("NAME"));
     }
 
-    public List<Film> getFilmByDirector(Long directorId, String sortBy) {
+    public List<Film> getFilmByDirector(Long directorId, DirectorSortValue sortBy) {
         String sql = GET_FILMS_BY_DIRECTOR;
-        String orderby = "ID";
-        if (sortBy != null) {
-            if (sortBy.equals("year")) {
-                orderby = "YEARS";
-            }
-            if (sortBy.equals("likes")) {
-                orderby = "LIKES DESC";
-            }
-        }
-        sql = String.format(sql, String.format(" ORDER BY %s", orderby));
+        String orderBy = (sortBy != null) ? sortBy.getSqlOrder() : DirectorSortValue.DEFAULT.getSqlOrder();
+        sql = String.format(sql, String.format(" ORDER BY %s", orderBy));
         return executeFilmQuery(sql, directorId).stream().distinct().toList();
     }
 
@@ -422,8 +427,8 @@ public class FilmRepository extends BaseRepository<Film> {
         boolean searchByDirector = false;
 
         for (String param : searchBy) {
-            if ("title".equalsIgnoreCase(param.trim())) searchByTitle = true;
-            if ("director".equalsIgnoreCase(param.trim())) searchByDirector = true;
+            searchByTitle = "title".equalsIgnoreCase(param.trim()) || searchByTitle;
+            searchByDirector = "director".equalsIgnoreCase(param.trim()) || searchByDirector;
         }
 
         if (!searchByTitle && !searchByDirector) {
